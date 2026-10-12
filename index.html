@@ -1,4 +1,4 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#242a3b"><title data-sc-version-title>StampCraft Beta 0.8.6</title><style>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#242a3b"><title data-sc-version-title>StampCraft Beta 0.8.7</title><style>
 :root{font-family:system-ui,-apple-system,sans-serif;color:#243044;background:#f4f5f7}*{box-sizing:border-box}body{margin:0}header{background:#242a3b;color:white;padding:22px 18px}header>div,main,footer{max-width:900px;margin:auto}h1{font-size:27px;margin:0}header p{color:#d6dce8;font-size:13px;margin:7px 0 0}main{padding:16px 12px 50px}.panel{background:white;border:1px solid #dde1e7;border-radius:17px;padding:18px;margin-bottom:15px}h2{font-size:18px;margin:0 0 15px}label{font-size:13px;font-weight:650;display:block;margin:0 0 6px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}input[type=number],select,input[type=range]{width:100%}input[type=number],select{font-size:16px;padding:10px;border:1px solid #cdd2da;border-radius:9px;background:white}input[type=file]{max-width:100%}button{border:0;border-radius:10px;background:#e9edf3;padding:11px 13px;color:#26344c;font-size:13px;font-weight:700;cursor:pointer}button.primary{background:#273f60;color:white}button:disabled{opacity:.4}.actions,.presets,.modes{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.modes button{flex:1;min-width:130px;border:2px solid transparent}.modes button.selected{border-color:#4c6fba;background:#eaf1ff}.status{margin-top:12px;background:#eef4f9;padding:11px;border-radius:9px;font-size:13px;overflow-wrap:anywhere}.muted{font-size:12px;color:#637082;line-height:1.6}.checker{background-color:#fff;background-image:linear-gradient(45deg,#e8eaee 25%,transparent 25%),linear-gradient(-45deg,#e8eaee 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e8eaee 75%),linear-gradient(-45deg,transparent 75%,#e8eaee 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}#previewWrap{position:relative;margin-top:12px;overflow:hidden;border-radius:9px}#preview{width:100%;height:auto;display:block}#guides{position:absolute;inset:0;width:100%;height:100%;touch-action:none}#result{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:10px;margin-top:15px}.tile{border:1px solid #d6dce4;border-radius:10px;padding:8px;background:white;text-align:center}.tile img{display:block;width:100%;aspect-ratio:1;object-fit:contain}.tile small{font-size:11px;overflow-wrap:anywhere}.badge{font-size:11px;padding:4px 8px;border-radius:20px;background:#dfeafa;color:#234065}.hidden{display:none!important}dialog{border:0;border-radius:16px;padding:17px;width:min(94vw,600px);max-height:94vh;overflow:auto}dialog::backdrop{background:#0009}.compare{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}.compare canvas{width:100%;height:auto;display:block;max-height:30vh;object-fit:contain;border-radius:8px}.compare label{margin-bottom:6px;text-align:center}.editWarning{background:#fff0df;color:#914300;padding:10px;border-radius:9px;font-size:13px;line-height:1.6;margin:10px 0}.editSafe{background:#e8f5ed;color:#22613b;padding:10px;border-radius:9px;font-size:13px;margin:10px 0}#editorCanvas{width:100%;max-height:45vh;object-fit:contain;display:block;border-radius:10px}.bgtools{border:1px solid #dce3ec;border-radius:12px;padding:12px;margin:12px 0}.tolrow{display:grid;grid-template-columns:minmax(0,1fr) 82px;gap:8px;align-items:center}.protectActive{background:#dff4e7!important;color:#185b35!important;outline:2px solid #55a875}.protectHint{background:#eef8f1;border-radius:9px;padding:9px;margin-top:10px}.protectSize{max-width:110px}.cleanupBox{background:#fff7e8;border-radius:9px;padding:10px;margin-top:10px}.cleanupActive{background:#fff0cf!important;color:#7a4b00!important;outline:2px solid #d9a23b}.qa{font-size:13px;line-height:1.8}.warn{color:#a34e16}.ok{color:#21653a}.note{border-left:3px solid #d59d48;padding-left:10px}footer{text-align:center;padding:20px} @media(max-width:380px){.panel{padding:13px}.modes button{min-width:100px}}
 
 .qaBox{margin-top:14px;padding:12px;border:1px solid #dfe5ee;border-radius:12px;background:#fbfcfe}
@@ -1104,12 +1104,21 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
  $('split').addEventListener('click',()=>{if(!stampcraftAppendMode){committed=false;pool=[];chosen=[];cleanup();panel.hidden=true}},true);
  // If changing mode clears the images, reset pool at the next DOM update.
  document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{committed=false;pool=[];chosen=[];cleanup();panel.hidden=true},true));
+
+ // Project persistence bridge: keep the entire candidate pool, not only the active selection.
+ window.stampcraftSelectionState={
+  export:()=>({pool:pool.slice(),chosen:chosen.slice(),committed}),
+  import:(items,indices,isCommitted)=>{
+   cleanup();pool=items.slice();chosen=indices.filter(i=>Number.isInteger(i)&&i>=0&&i<pool.length);committed=!!isCommitted;
+   render();
+  }
+ };
  syncPool();
 })();
 </script>
 <script>
 /* Version label source of truth: update only this constant on release. */
-const STAMPCRAFT_VERSION='0.8.6';
+const STAMPCRAFT_VERSION='0.8.7';
 document.title='StampCraft Beta '+STAMPCRAFT_VERSION;
 document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta '+STAMPCRAFT_VERSION});
 </script>
@@ -1136,6 +1145,83 @@ document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta
   toggle?.addEventListener('click',()=>{developerOpen=!developerOpen;syncModeQa();});
   document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>{developerOpen=false;syncModeQa();}));
   syncModeQa();
+})();
+</script>
+<script>
+/* Beta 0.8.7: explicit, local-only project export/import. */
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const section=document.createElement('section');section.className='panel';section.id='scProjectPanel';
+section.innerHTML=`<h2>⑩ 制作データの保存・再開</h2>
+<p class="muted">候補画像・採用順・背景透過設定・保護ブラシ・トリミング・差し替え・編集位置を、1つのプロジェクトファイルに保存します。端末内で処理し、サーバーには送信しません。</p>
+<div class="actions"><button type="button" id="scProjectSave" class="primary">プロジェクトを保存</button><label style="display:inline-flex;align-items:center;gap:7px;border-radius:10px;background:#e9edf3;padding:10px 12px;cursor:pointer">プロジェクトを読み込む<input type="file" id="scProjectLoad" accept=".json,application/json" style="display:none"></label></div>
+<div id="scProjectStatus" class="status" role="status">保存すると .json ファイルが端末にダウンロードされます。ブラウザーを閉じる前に保存してください。</div>`;
+const footer=document.querySelector('footer');footer.parentNode.insertBefore(section,footer);
+const status=msg=>{$('scProjectStatus').textContent=msg};
+const canvasOf=part=>{const c=document.createElement('canvas');c.width=part.sw;c.height=part.sh;const x=c.getContext('2d');if(part.replacementBitmap)x.drawImage(part.replacementBitmap,0,0,part.sw,part.sh);else x.drawImage(part.sheetBitmap||bitmap,part.sx,part.sy,part.sw,part.sh,0,0,part.sw,part.sh);return c};
+function encodeMask(mask){if(!mask)return null;let str='';for(let i=0;i<mask.length;i+=16384)str+=String.fromCharCode(...mask.subarray(i,i+16384));return btoa(str)}
+function decodeMask(data,length){if(!data)return null;const str=atob(data);if(str.length!==length)throw Error('保護マスクの長さが一致しません');return Uint8Array.from(str,c=>c.charCodeAt(0))}
+async function packPart(part){
+ const bg=part.bg||{};
+ return{source:canvasOf(part).toDataURL('image/png'),sw:part.sw,sh:part.sh,w:part.w,h:part.h,padding:part.padding||0,
+ bg:{...bg,protect:encodeMask(bg.protect)},edit:{...part.edit},crop:part.crop||null,
+ // Keep additional non-bitmap per-image settings for future compatibility.
+ trim:part.trim||null};
+}
+function setBusy(b){$('scProjectSave').disabled=b;$('scProjectLoad').disabled=b}
+$('scProjectSave').addEventListener('click',async()=>{
+ setBusy(true);status('候補画像をプロジェクトに保存中…');
+ try{
+  const state=window.stampcraftSelectionState?.export();const pool=state?.pool?.length?state.pool:parts;
+  if(!pool.length)throw Error('保存する画像がありません。先にシートを分割してください。');
+  const candidates=[];for(let i=0;i<pool.length;i++){candidates.push(await packPart(pool[i]));if(i%4===0)status('保存準備 '+(i+1)+' / '+pool.length+'枚…')}
+  const data={format:'StampCraftProject',schema:1,created:new Date().toISOString(),appVersion:'0.8.7',mode,
+   candidates,chosen:state?.pool?.length?state.chosen:pool.map((_,i)=>i),committed:state?.pool?.length?state.committed:false,
+   mainPick:Number($('mainPick')?.value||0),tabPick:Number($('tabPick')?.value||0),
+   options:Object.fromEntries(['cols','rows','margin','gap','inset','outW','outH','padding','outputMode'].map(id=>[id,$(id)?.value]))};
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='stampcraft_project_'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  status('保存ファイルを作成しました（'+pool.length+'候補・採用'+data.chosen.length+'枚）。「ファイル」に保存されたことを確認してください。');
+ }catch(e){status('保存できませんでした：'+e.message)}finally{setBusy(false)}
+});
+$('scProjectLoad').addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ if(parts.length&&!confirm('現在の制作データを読み込み内容に置き換えます。保存していない変更は失われます。続行しますか？')){e.target.value='';return}
+ setBusy(true);status('プロジェクトを検査・復元中…');
+ try{
+  if(file.size>250*1024*1024)throw Error('ファイルが大きすぎます（250MB超）');
+  const data=JSON.parse(await file.text());
+  if(data.format!=='StampCraftProject'||data.schema!==1||!Array.isArray(data.candidates)||!data.candidates.length||data.candidates.length>40)throw Error('対応していないプロジェクト形式です');
+  if(!['free','sticker','emoji','theme'].includes(data.mode))throw Error('制作モードが不正です');
+  const restored=[];
+  for(let i=0;i<data.candidates.length;i++){
+   const a=data.candidates[i];if(!Number.isInteger(a.sw)||!Number.isInteger(a.sh)||a.sw<1||a.sh<1||a.sw*a.sh>24000000||!Number.isInteger(a.w)||!Number.isInteger(a.h)||a.w<1||a.h<1||a.w*a.h>24000000||typeof a.source!=='string'||!a.source.startsWith('data:image/png;base64,'))throw Error('画像 '+(i+1)+' のデータが不正です');
+   const response=await fetch(a.source);const image=await createImageBitmap(await response.blob());
+   if(image.width!==a.sw||image.height!==a.sh)throw Error('画像 '+(i+1)+' の寸法が一致しません');
+   const bg={enabled:false,mode:'simple',colors:[],tolerance:25,mask:false,view:'off',protect:null,cleanupEnabled:false,cleanupStrength:15,...a.bg};bg.protect=decodeMask(a.bg?.protect,a.sw*a.sh);
+   const part={sheetBitmap:image,name:String(i+1).padStart(2,'0')+'.png',sx:0,sy:0,sw:a.sw,sh:a.sh,w:a.w,h:a.h,padding:a.padding||0,bg,edit:a.edit||{scale:1,x:0,y:0}};
+   if(a.crop)part.crop=a.crop;if(a.trim)part.trim=a.trim;
+   restored.push(part);if(i%4===0)status('画像を復元 '+(i+1)+' / '+data.candidates.length+'枚…');
+  }
+  const chosen=Array.isArray(data.chosen)?data.chosen:restored.map((_,i)=>i);
+  if(new Set(chosen).size!==chosen.length||chosen.some(i=>!Number.isInteger(i)||i<0||i>=restored.length))throw Error('採用順のデータが不正です');
+  const selected=data.committed?chosen.map(i=>restored[i]):restored;
+  if(!selected.length)throw Error('編集対象の画像がありません');
+  // All validation and decoding succeeded; now replace the current project.
+  document.querySelector(`[data-mode="${data.mode}"]`)?.click();
+  mode=data.mode;
+  for(const [id,value] of Object.entries(data.options||{})){if($(id)&&value!=null)$(id).value=value}
+  parts=selected;urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});urls=[];
+  for(let i=0;i<parts.length;i++){parts[i].name=String(i+1).padStart(2,'0')+'.png';await refreshPart(i)}
+  $('result').replaceChildren();buildTiles();$('count').textContent=parts.length+'枚';$('resultsPanel').hidden=false;
+  window.stampcraftSelectionState?.import(restored,chosen,!!data.committed);
+  qa();refreshSubmissionUI();
+  if($('mainPick'))$('mainPick').value=String(Math.min(data.mainPick||0,parts.length-1));
+  if($('tabPick'))$('tabPick').value=String(Math.min(data.tabPick||0,parts.length-1));
+  $('addSheet').disabled=false;
+  status('復元完了：候補 '+restored.length+'枚・採用 '+chosen.length+'枚。編集・QA・ZIP出力を再開できます。');
+ }catch(err){status('読み込み失敗：'+err.message+'。形式・画像・容量を確認してください。')}finally{setBusy(false);e.target.value=''}
+});
 })();
 </script>
 </body></html>
