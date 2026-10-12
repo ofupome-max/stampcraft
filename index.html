@@ -1118,7 +1118,7 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
 </script>
 <script>
 /* Version label source of truth: update only this constant on release. */
-const STAMPCRAFT_VERSION='0.8.7a';
+const STAMPCRAFT_VERSION='0.8.8';
 document.title='StampCraft Beta '+STAMPCRAFT_VERSION;
 document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta '+STAMPCRAFT_VERSION});
 </script>
@@ -1148,17 +1148,23 @@ document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta
 })();
 </script>
 <script>
-/* Beta 0.8.7: explicit, local-only project export/import. */
+/* Beta 0.8.8: verified, transactional local-only project export/import. */
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
 const section=document.createElement('section');section.className='panel';section.id='scProjectPanel';
-section.innerHTML=`<h2>⑩ 制作データの保存・再開</h2>
+section.innerHTML=`<h2>⑩ 制作データの保存・再開（安全性強化）</h2>
 <p class="muted">候補画像・採用順・背景透過設定・保護ブラシ・トリミング・差し替え・編集位置を、1つのプロジェクトファイルに保存します。端末内で処理し、サーバーには送信しません。</p>
 <div class="actions"><button type="button" id="scProjectSave" class="primary">プロジェクトを保存</button><label style="display:inline-flex;align-items:center;gap:7px;border-radius:10px;background:#e9edf3;padding:10px 12px;cursor:pointer">プロジェクトを読み込む<input type="file" id="scProjectLoad" accept=".json,application/json" style="display:none"></label></div>
-<div id="scProjectStatus" class="status" role="status">保存すると .json ファイルが端末にダウンロードされます。ブラウザーを閉じる前に保存してください。</div>`;
+<div id="scProjectStatus" class="status" role="status">保存すると .json ファイルが端末にダウンロードされます。ブラウザーを閉じる前に保存してください。保存ファイルには画像が含まれるため、第三者に渡さないでください。</div>`;
 const footer=document.querySelector('footer');footer.parentNode.insertBefore(section,footer);
 const status=msg=>{$('scProjectStatus').textContent=msg};
+async function projectDigest(data){
+ if(!crypto?.subtle)throw Error('安全な整合性検証に対応したHTTPS環境で開いてください');
+ const bytes=new TextEncoder().encode(JSON.stringify(data));
+ const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+ return Array.from(hash,x=>x.toString(16).padStart(2,'0')).join('');
+}
 const canvasOf=part=>{const c=document.createElement('canvas');c.width=part.sw;c.height=part.sh;const x=c.getContext('2d');if(part.replacementBitmap)x.drawImage(part.replacementBitmap,0,0,part.sw,part.sh);else x.drawImage(part.sheetBitmap||bitmap,part.sx,part.sy,part.sw,part.sh,0,0,part.sw,part.sh);return c};
 function encodeMask(mask){if(!mask)return null;let str='';for(let i=0;i<mask.length;i+=16384)str+=String.fromCharCode(...mask.subarray(i,i+16384));return btoa(str)}
 function decodeMask(data,length){if(!data)return null;const str=atob(data);if(str.length!==length)throw Error('保護マスクの長さが一致しません');return Uint8Array.from(str,c=>c.charCodeAt(0))}
@@ -1177,10 +1183,11 @@ $('scProjectSave').addEventListener('click',async()=>{
   if(!pool.length)throw Error('保存する画像がありません。先にシートを分割してください。');
   const candidates=[];for(let i=0;i<pool.length;i++){candidates.push(await packPart(pool[i]));if(i%4===0)status('保存準備 '+(i+1)+' / '+pool.length+'枚…')}
   if(state?.committed&&(state.chosen.length!==parts.length||state.chosen.some((idx,i)=>pool[idx]!==parts[i])))throw Error('採用セットの整合性を確認できません。候補一覧に戻して再度採用してください。');
-  const data={format:'StampCraftProject',schema:1,created:new Date().toISOString(),appVersion:'0.8.7a',mode,
+  const data={format:'StampCraftProject',schema:1,created:new Date().toISOString(),appVersion:'0.8.8',mode,
    candidates,chosen:state?.pool?.length?state.chosen:pool.map((_,i)=>i),committed:state?.pool?.length?state.committed:false,activeCount:parts.length,
    mainPick:Number($('mainPick')?.value||0),tabPick:Number($('tabPick')?.value||0),
    options:Object.fromEntries(['cols','rows','margin','gap','inset','outW','outH','padding','outputMode'].map(id=>[id,$(id)?.value]))};
+  data.integrity={algorithm:'SHA-256',digest:await projectDigest(data)};
   const blob=new Blob([JSON.stringify(data)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='stampcraft_project_'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   status('保存ファイルを作成しました（'+pool.length+'候補・採用'+data.chosen.length+'枚）。「ファイル」に保存されたことを確認してください。');
  }catch(e){status('保存できませんでした：'+e.message)}finally{setBusy(false)}
@@ -1188,12 +1195,26 @@ $('scProjectSave').addEventListener('click',async()=>{
 $('scProjectLoad').addEventListener('change',async e=>{
  const file=e.target.files?.[0];if(!file)return;
  if(parts.length&&!confirm('現在の制作データを読み込み内容に置き換えます。保存していない変更は失われます。続行しますか？')){e.target.value='';return}
- setBusy(true);status('プロジェクトを検査・復元中…');
+ setBusy(true);status('プロジェクトを検査・復元中… 現在の制作内容は検証完了まで維持されます。');
  try{
   if(file.size>250*1024*1024)throw Error('ファイルが大きすぎます（250MB超）');
   const data=JSON.parse(await file.text());
   if(data.format!=='StampCraftProject'||data.schema!==1||!Array.isArray(data.candidates)||!data.candidates.length||data.candidates.length>40)throw Error('対応していないプロジェクト形式です');
   if(!['free','sticker','emoji','theme'].includes(data.mode))throw Error('制作モードが不正です');
+  if(data.integrity){
+   if(data.integrity.algorithm!=='SHA-256'||!(/^[0-9a-f]{64}$/).test(data.integrity.digest||''))throw Error('保存ファイルの検証情報が不正です');
+   const {integrity,...payload}=data;
+   if(await projectDigest(payload)!==integrity.digest)throw Error('保存ファイルの内容が変更または破損しています（SHA-256不一致）');
+  }else if(data.schema===1){
+   status('旧形式の保存ファイルです。チェックサムはありませんが、画像と構造を検査して読み込みます。');
+  }
+  if(!data.options||typeof data.options!=='object'||Array.isArray(data.options))throw Error('分割設定が不正です');
+  if(data.committed!==true&&data.committed!==false)throw Error('採用状態が不正です');
+  if(!Array.isArray(data.chosen))throw Error('採用順がありません');
+  if(!Number.isInteger(data.activeCount)||data.activeCount<1||data.activeCount>40)throw Error('編集枚数が不正です');
+  if(data.committed&&data.chosen.length!==data.activeCount)throw Error('採用枚数と編集枚数が一致しません');
+  if(!data.committed&&data.activeCount!==data.candidates.length)throw Error('候補枚数と編集枚数が一致しません');
+  if(data.candidates.some(a=>!a||typeof a!=='object'||!a.edit||!Number.isFinite(a.edit.scale)||a.edit.scale<=0||a.edit.scale>100||!Number.isFinite(a.edit.x)||!Number.isFinite(a.edit.y)||Math.abs(a.edit.x)>1000||Math.abs(a.edit.y)>1000))throw Error('画像の編集設定が不正です');
   const restored=[];
   for(let i=0;i<data.candidates.length;i++){
    const a=data.candidates[i];if(!Number.isInteger(a.sw)||!Number.isInteger(a.sh)||a.sw<1||a.sh<1||a.sw*a.sh>24000000||!Number.isInteger(a.w)||!Number.isInteger(a.h)||a.w<1||a.h<1||a.w*a.h>24000000||typeof a.source!=='string'||!a.source.startsWith('data:image/png;base64,'))throw Error('画像 '+(i+1)+' のデータが不正です');
@@ -1202,6 +1223,8 @@ $('scProjectLoad').addEventListener('change',async e=>{
    const bg={enabled:false,mode:'simple',colors:[],tolerance:25,mask:false,view:'off',protect:null,cleanupEnabled:false,cleanupStrength:15,...a.bg};bg.protect=decodeMask(a.bg?.protect,a.sw*a.sh);
    const part={sheetBitmap:image,name:String(i+1).padStart(2,'0')+'.png',sx:0,sy:0,sw:a.sw,sh:a.sh,w:a.w,h:a.h,padding:a.padding||0,bg,edit:a.edit||{scale:1,x:0,y:0}};
    if(a.crop)part.crop=a.crop;if(a.trim)part.trim=a.trim;
+   // Prepare a complete output PNG without mutating the current project.
+   part.blob=await canvasBlob(renderPart({...part,bg:{...part.bg,mask:false}}));
    restored.push(part);if(i%4===0)status('画像を復元 '+(i+1)+' / '+data.candidates.length+'枚…');
   }
   let chosen=Array.isArray(data.chosen)?data.chosen:restored.map((_,i)=>i);
@@ -1216,11 +1239,12 @@ $('scProjectLoad').addEventListener('change',async e=>{
   document.querySelector(`[data-mode="${data.mode}"]`)?.click();
   mode=data.mode;
   for(const [id,value] of Object.entries(data.options||{})){if($(id)&&value!=null)$(id).value=value}
-  // Rebuild PNG blobs for EVERY candidate, not only the active selection.
-  // The selection grid requires candidate.blob for all 32 items.
-  parts=restored;urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});urls=[];
-  for(let i=0;i<parts.length;i++){parts[i].name=String(i+1).padStart(2,'0')+'.png';await refreshPart(i)}
-  parts=selected;urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});urls=parts.map(p=>URL.createObjectURL(p.blob));
+  // Every candidate was fully decoded and rendered before replacing current data.
+  // Commit only after preflight passes; do not clear active work on invalid files.
+  const newUrls=selected.map(p=>URL.createObjectURL(p.blob));
+  const oldUrls=urls.slice();
+  parts=selected;urls=newUrls;
+  oldUrls.forEach(u=>{if(u)URL.revokeObjectURL(u)});
   parts.forEach((p,i)=>p.name=String(i+1).padStart(2,'0')+'.png');
   $('result').replaceChildren();buildTiles();$('count').textContent=parts.length+'枚';$('resultsPanel').hidden=false;
   window.stampcraftSelectionState?.import(restored,chosen,!!data.committed);
@@ -1228,7 +1252,7 @@ $('scProjectLoad').addEventListener('change',async e=>{
   if($('mainPick'))$('mainPick').value=String(Math.min(data.mainPick||0,parts.length-1));
   if($('tabPick'))$('tabPick').value=String(Math.min(data.tabPick||0,parts.length-1));
   $('addSheet').disabled=false;
-  status('復元完了：候補 '+restored.length+'枚・採用 '+(data.committed?chosen.length:0)+'枚・編集中 '+parts.length+'枚。編集・QA・ZIP出力を再開できます。');
+  status('復元完了'+(data.integrity?'（SHA-256検証済み）':'（旧形式・チェックサムなし）')+'：候補 '+restored.length+'枚・採用 '+(data.committed?chosen.length:0)+'枚・編集中 '+parts.length+'枚。編集・QA・ZIP出力を再開できます。');
  }catch(err){status('読み込み失敗：'+err.message+'。形式・画像・容量を確認してください。')}finally{setBusy(false);e.target.value=''}
 });
 })();
