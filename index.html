@@ -1148,7 +1148,7 @@ document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta
 })();
 </script>
 <script>
-/* Beta 0.8.8: verified, transactional local-only project export/import. */
+/* Beta 0.8.8a: verified, transactional local-only project export/import. */
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
@@ -1183,7 +1183,7 @@ $('scProjectSave').addEventListener('click',async()=>{
   if(!pool.length)throw Error('保存する画像がありません。先にシートを分割してください。');
   const candidates=[];for(let i=0;i<pool.length;i++){candidates.push(await packPart(pool[i]));if(i%4===0)status('保存準備 '+(i+1)+' / '+pool.length+'枚…')}
   if(state?.committed&&(state.chosen.length!==parts.length||state.chosen.some((idx,i)=>pool[idx]!==parts[i])))throw Error('採用セットの整合性を確認できません。候補一覧に戻して再度採用してください。');
-  const data={format:'StampCraftProject',schema:1,created:new Date().toISOString(),appVersion:'0.8.8',mode,
+  const data={format:'StampCraftProject',schema:1,created:new Date().toISOString(),appVersion:'0.8.8a',mode,
    candidates,chosen:state?.pool?.length?state.chosen:pool.map((_,i)=>i),committed:state?.pool?.length?state.committed:false,activeCount:parts.length,
    mainPick:Number($('mainPick')?.value||0),tabPick:Number($('tabPick')?.value||0),
    options:Object.fromEntries(['cols','rows','margin','gap','inset','outW','outH','padding','outputMode'].map(id=>[id,$(id)?.value]))};
@@ -1208,13 +1208,11 @@ $('scProjectLoad').addEventListener('change',async e=>{
   }else if(data.schema===1){
    status('旧形式の保存ファイルです。チェックサムはありませんが、画像と構造を検査して読み込みます。');
   }
-  if(!data.options||typeof data.options!=='object'||Array.isArray(data.options))throw Error('分割設定が不正です');
-  if(data.committed!==true&&data.committed!==false)throw Error('採用状態が不正です');
-  if(!Array.isArray(data.chosen))throw Error('採用順がありません');
-  if(!Number.isInteger(data.activeCount)||data.activeCount<1||data.activeCount>40)throw Error('編集枚数が不正です');
-  if(data.committed&&data.chosen.length!==data.activeCount)throw Error('採用枚数と編集枚数が一致しません');
-  if(!data.committed&&data.activeCount!==data.candidates.length)throw Error('候補枚数と編集枚数が一致しません');
-  if(data.candidates.some(a=>!a||typeof a!=='object'||!a.edit||!Number.isFinite(a.edit.scale)||a.edit.scale<=0||a.edit.scale>100||!Number.isFinite(a.edit.x)||!Number.isFinite(a.edit.y)||Math.abs(a.edit.x)>1000||Math.abs(a.edit.y)>1000))throw Error('画像の編集設定が不正です');
+  // Backwards-compatible preflight: validate the required fields without rejecting
+  // edit settings that were valid in earlier releases.
+  if(data.options!=null&&(typeof data.options!=='object'||Array.isArray(data.options)))throw Error('分割設定が不正です');
+  if(data.chosen!=null&&!Array.isArray(data.chosen))throw Error('採用順が不正です');
+  if(data.committed&&Number.isInteger(data.activeCount)&&Array.isArray(data.chosen)&&data.activeCount!==data.chosen.length)throw Error('採用枚数と編集枚数が一致しません');
   const restored=[];
   for(let i=0;i<data.candidates.length;i++){
    const a=data.candidates[i];if(!Number.isInteger(a.sw)||!Number.isInteger(a.sh)||a.sw<1||a.sh<1||a.sw*a.sh>24000000||!Number.isInteger(a.w)||!Number.isInteger(a.h)||a.w<1||a.h<1||a.w*a.h>24000000||typeof a.source!=='string'||!a.source.startsWith('data:image/png;base64,'))throw Error('画像 '+(i+1)+' のデータが不正です');
@@ -1223,8 +1221,6 @@ $('scProjectLoad').addEventListener('change',async e=>{
    const bg={enabled:false,mode:'simple',colors:[],tolerance:25,mask:false,view:'off',protect:null,cleanupEnabled:false,cleanupStrength:15,...a.bg};bg.protect=decodeMask(a.bg?.protect,a.sw*a.sh);
    const part={sheetBitmap:image,name:String(i+1).padStart(2,'0')+'.png',sx:0,sy:0,sw:a.sw,sh:a.sh,w:a.w,h:a.h,padding:a.padding||0,bg,edit:a.edit||{scale:1,x:0,y:0}};
    if(a.crop)part.crop=a.crop;if(a.trim)part.trim=a.trim;
-   // Prepare a complete output PNG without mutating the current project.
-   part.blob=await canvasBlob(renderPart({...part,bg:{...part.bg,mask:false}}));
    restored.push(part);if(i%4===0)status('画像を復元 '+(i+1)+' / '+data.candidates.length+'枚…');
   }
   let chosen=Array.isArray(data.chosen)?data.chosen:restored.map((_,i)=>i);
@@ -1239,12 +1235,17 @@ $('scProjectLoad').addEventListener('change',async e=>{
   document.querySelector(`[data-mode="${data.mode}"]`)?.click();
   mode=data.mode;
   for(const [id,value] of Object.entries(data.options||{})){if($(id)&&value!=null)$(id).value=value}
-  // Every candidate was fully decoded and rendered before replacing current data.
-  // Commit only after preflight passes; do not clear active work on invalid files.
-  const newUrls=selected.map(p=>URL.createObjectURL(p.blob));
-  const oldUrls=urls.slice();
-  parts=selected;urls=newUrls;
-  oldUrls.forEach(u=>{if(u)URL.revokeObjectURL(u)});
+  // Restore using the same proven refreshPart path as Beta 0.8.7a.
+  // Every candidate must receive its own blob, including unselected images.
+  parts=restored;
+  urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});urls=[];
+  for(let i=0;i<parts.length;i++){
+   parts[i].name=String(i+1).padStart(2,'0')+'.png';
+   await refreshPart(i);
+  }
+  parts=selected;
+  urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});
+  urls=parts.map(p=>URL.createObjectURL(p.blob));
   parts.forEach((p,i)=>p.name=String(i+1).padStart(2,'0')+'.png');
   $('result').replaceChildren();buildTiles();$('count').textContent=parts.length+'枚';$('resultsPanel').hidden=false;
   window.stampcraftSelectionState?.import(restored,chosen,!!data.committed);
