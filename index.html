@@ -1107,7 +1107,7 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
 
  // Project persistence bridge: keep the entire candidate pool, not only the active selection.
  window.stampcraftSelectionState={
-  export:()=>({pool:pool.slice(),chosen:chosen.slice(),committed}),
+  export:()=>({pool:pool.slice(),chosen:committed?parts.map(p=>pool.indexOf(p)).filter(i=>i>=0):chosen.slice(),committed}),
   import:(items,indices,isCommitted)=>{
    cleanup();pool=items.slice();chosen=indices.filter(i=>Number.isInteger(i)&&i>=0&&i<pool.length);committed=!!isCommitted;
    render();
@@ -1118,7 +1118,7 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
 </script>
 <script>
 /* Version label source of truth: update only this constant on release. */
-const STAMPCRAFT_VERSION='0.8.7';
+const STAMPCRAFT_VERSION='0.8.7a';
 document.title='StampCraft Beta '+STAMPCRAFT_VERSION;
 document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta '+STAMPCRAFT_VERSION});
 </script>
@@ -1176,8 +1176,9 @@ $('scProjectSave').addEventListener('click',async()=>{
   const state=window.stampcraftSelectionState?.export();const pool=state?.pool?.length?state.pool:parts;
   if(!pool.length)throw Error('保存する画像がありません。先にシートを分割してください。');
   const candidates=[];for(let i=0;i<pool.length;i++){candidates.push(await packPart(pool[i]));if(i%4===0)status('保存準備 '+(i+1)+' / '+pool.length+'枚…')}
-  const data={format:'StampCraftProject',schema:1,created:new Date().toISOString(),appVersion:'0.8.7',mode,
-   candidates,chosen:state?.pool?.length?state.chosen:pool.map((_,i)=>i),committed:state?.pool?.length?state.committed:false,
+  if(state?.committed&&(state.chosen.length!==parts.length||state.chosen.some((idx,i)=>pool[idx]!==parts[i])))throw Error('採用セットの整合性を確認できません。候補一覧に戻して再度採用してください。');
+  const data={format:'StampCraftProject',schema:1,created:new Date().toISOString(),appVersion:'0.8.7a',mode,
+   candidates,chosen:state?.pool?.length?state.chosen:pool.map((_,i)=>i),committed:state?.pool?.length?state.committed:false,activeCount:parts.length,
    mainPick:Number($('mainPick')?.value||0),tabPick:Number($('tabPick')?.value||0),
    options:Object.fromEntries(['cols','rows','margin','gap','inset','outW','outH','padding','outputMode'].map(id=>[id,$(id)?.value]))};
   const blob=new Blob([JSON.stringify(data)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='stampcraft_project_'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
@@ -1203,7 +1204,11 @@ $('scProjectLoad').addEventListener('change',async e=>{
    if(a.crop)part.crop=a.crop;if(a.trim)part.trim=a.trim;
    restored.push(part);if(i%4===0)status('画像を復元 '+(i+1)+' / '+data.candidates.length+'枚…');
   }
-  const chosen=Array.isArray(data.chosen)?data.chosen:restored.map((_,i)=>i);
+  let chosen=Array.isArray(data.chosen)?data.chosen:restored.map((_,i)=>i);
+  // 0.8.7 could save all candidate indices even when only 16 images were active.
+  // A legacy project with that mismatch cannot safely reconstruct the missing selection.
+  if(data.committed&&Number.isInteger(data.activeCount)&&data.activeCount!==chosen.length)throw Error('旧版の採用枚数が一致しません。元のプロジェクトで選択を確認し、再保存してください');
+  if(data.committed&&data.activeCount===undefined&&chosen.length===restored.length){status('注意：旧版ファイルは採用順が正しく保存されていない可能性があります。復元後、候補の選択を確認してください。')}
   if(new Set(chosen).size!==chosen.length||chosen.some(i=>!Number.isInteger(i)||i<0||i>=restored.length))throw Error('採用順のデータが不正です');
   const selected=data.committed?chosen.map(i=>restored[i]):restored;
   if(!selected.length)throw Error('編集対象の画像がありません');
@@ -1211,15 +1216,19 @@ $('scProjectLoad').addEventListener('change',async e=>{
   document.querySelector(`[data-mode="${data.mode}"]`)?.click();
   mode=data.mode;
   for(const [id,value] of Object.entries(data.options||{})){if($(id)&&value!=null)$(id).value=value}
-  parts=selected;urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});urls=[];
+  // Rebuild PNG blobs for EVERY candidate, not only the active selection.
+  // The selection grid requires candidate.blob for all 32 items.
+  parts=restored;urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});urls=[];
   for(let i=0;i<parts.length;i++){parts[i].name=String(i+1).padStart(2,'0')+'.png';await refreshPart(i)}
+  parts=selected;urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});urls=parts.map(p=>URL.createObjectURL(p.blob));
+  parts.forEach((p,i)=>p.name=String(i+1).padStart(2,'0')+'.png');
   $('result').replaceChildren();buildTiles();$('count').textContent=parts.length+'枚';$('resultsPanel').hidden=false;
   window.stampcraftSelectionState?.import(restored,chosen,!!data.committed);
   qa();refreshSubmissionUI();
   if($('mainPick'))$('mainPick').value=String(Math.min(data.mainPick||0,parts.length-1));
   if($('tabPick'))$('tabPick').value=String(Math.min(data.tabPick||0,parts.length-1));
   $('addSheet').disabled=false;
-  status('復元完了：候補 '+restored.length+'枚・採用 '+chosen.length+'枚。編集・QA・ZIP出力を再開できます。');
+  status('復元完了：候補 '+restored.length+'枚・採用 '+(data.committed?chosen.length:0)+'枚・編集中 '+parts.length+'枚。編集・QA・ZIP出力を再開できます。');
  }catch(err){status('読み込み失敗：'+err.message+'。形式・画像・容量を確認してください。')}finally{setBusy(false);e.target.value=''}
 });
 })();
