@@ -57,6 +57,21 @@
 .sc-editor-identity strong{font-size:13px;line-height:1.35;overflow-wrap:anywhere;color:#536178}
 .sc-editor-count{display:inline-flex;align-self:flex-start;background:#e6eefc;color:#1c4485;font-size:15px;font-weight:800;letter-spacing:.02em;border-radius:8px;padding:5px 10px;font-variant-numeric:tabular-nums}
 @media(max-width:480px){#modal{width:96vw;max-height:95dvh;padding:12px}.sc-editor-count{font-size:16px}.sc-nav-label{margin-top:12px}}
+
+/* Beta 0.8.9: mobile-first accordion navigation */
+.sc-accordion{margin:12px 0;border:1px solid #bac7d8;border-radius:14px;background:#fff;overflow:hidden}
+.sc-accordion>summary{list-style:none;cursor:pointer;padding:15px 16px;font-weight:800;font-size:1.08rem;color:#24324a;display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none;-webkit-tap-highlight-color:transparent}
+.sc-accordion>summary::-webkit-details-marker{display:none}
+.sc-accordion>summary::after{content:'＋';font-size:1.35rem;line-height:1;color:#50647f;flex:0 0 auto}
+.sc-accordion[open]>summary::after{content:'−'}
+.sc-accordion[open]>summary{border-bottom:1px solid #d8e0ea;background:#f7f9fc}
+.sc-accordion-body{padding:14px 16px 16px}
+.sc-accordion .qaBox{margin:0;border:0;padding:0;background:transparent}
+.sc-major-accordion{margin:0}
+.sc-major-accordion>summary{font-size:1.22rem;padding:2px 0 14px}
+.sc-major-accordion[open]>summary{background:transparent;border-bottom:1px solid #d8e0ea;margin-bottom:4px}
+.sc-major-accordion>.sc-accordion-body{padding:12px 0 0}
+@media(max-width:640px){.sc-accordion>summary{padding:14px 13px}.sc-accordion-body{padding:12px}.sc-major-accordion>summary{padding:0 0 12px;font-size:1.15rem}.sc-major-accordion>.sc-accordion-body{padding:10px 0 0}}
 </style></head><body><header><div><h1>✂ StampCraft <span class="badge" data-sc-version>Beta 0.8.6</span></h1><p>画像分割・個別編集・サイズ統一。処理は端末内で完結。</p></div></header><main>
 <section class="panel"><h2>① 制作モード</h2><div class="modes"><button data-mode="free" class="selected">画像分割</button><button data-mode="sticker">LINEスタンプ</button><button data-mode="emoji">LINE絵文字</button><button data-mode="theme">LINE着せかえ（準備中）</button></div><div id="modeInfo" class="status">自由なサイズで画像を分割できます。</div><p class="muted">非公式ツールです。着せかえは規格が複雑なため、現バージョンでは専用出力を提供しません。</p></section>
 <section class="panel" id="emojiSubmissionPanel" hidden><h2>LINE絵文字・専用出力</h2><p class="muted">通常絵文字用の180×180px PNGを出力します。画像は001.pngから連番で保存。タブ画像は96×74pxです。ZIPの中身を保存前に検証します。文字や絵柄の審査適合は目視確認してください。</p><div class="grid"><div><label for="emojiTabPick">タブ画像に使用する絵文字</label><select id="emojiTabPick"></select></div><div><label>タブ画像プレビュー</label><canvas id="emojiTabPreview" class="checker" width="96" height="74" style="width:144px;max-width:100%;height:auto;border:1px solid #ccd4df"></canvas></div></div><div class="actions"><button id="emojiPreview" class="primary" type="button">絵文字申請データを確認</button><button id="emojiZip" type="button">絵文字用ZIPを保存</button></div><div id="emojiStatus" class="status" role="status">絵文字モードで分割後、確認してください。</div><div class="qaBox" id="emojiQaBox"><h3>絵文字専用QA（40個にも対応）</h3><p class="muted">各PNGの180×180px・容量・透過の有無・余白を確認します。余白10pxはStampCraft独自の目安です。</p><div class="actions"><button id="emojiRunQa" type="button">絵文字を一括QA</button></div><div id="emojiQaSummary" class="status qa" role="status">未検査</div><div id="emojiQaGrid" class="qaGrid"></div></div><div id="emojiFinalGrid" class="submissionFinalGrid"></div></section>
@@ -1128,7 +1143,7 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
 </script>
 <script>
 /* Version label source of truth: update only this constant on release. */
-const STAMPCRAFT_VERSION='0.8.8';
+const STAMPCRAFT_VERSION='0.8.9';
 document.title='StampCraft Beta '+STAMPCRAFT_VERSION;
 document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta '+STAMPCRAFT_VERSION});
 </script>
@@ -1266,6 +1281,51 @@ $('scProjectLoad').addEventListener('change',async e=>{
   status('復元完了'+(data.integrity?'（SHA-256検証済み）':'（旧形式・チェックサムなし）')+'：候補 '+restored.length+'枚・採用 '+(data.committed?chosen.length:0)+'枚・編集中 '+parts.length+'枚。編集・QA・ZIP出力を再開できます。');
  }catch(err){status('読み込み失敗：'+err.message+'。形式・画像・容量を確認してください。')}finally{setBusy(false);e.target.value=''}
 });
+})();
+</script>
+
+<script>
+/* Beta 0.8.9: compact mobile navigation. Existing tool IDs and processing are unchanged. */
+(function(){
+ 'use strict';
+ function accordionizeBox(box,title){
+  if(!box||box.dataset.scAccordion==='1')return;
+  const details=document.createElement('details');
+  details.className='sc-accordion';
+  const summary=document.createElement('summary');summary.textContent=title;
+  const body=document.createElement('div');body.className='sc-accordion-body';
+  // Remove the old visible heading because summary becomes the heading.
+  const oldHeading=box.querySelector(':scope > h3, :scope > h2');
+  if(oldHeading)oldHeading.remove();
+  while(box.firstChild)body.appendChild(box.firstChild);
+  details.append(summary,body);
+  box.appendChild(details);box.dataset.scAccordion='1';
+ }
+ function accordionizePanel(panel){
+  if(!panel||panel.dataset.scMajorAccordion==='1')return;
+  const h=panel.querySelector(':scope > h2');if(!h)return;
+  const details=document.createElement('details');details.className='sc-accordion sc-major-accordion';
+  const summary=document.createElement('summary');summary.textContent=h.textContent.trim();
+  const body=document.createElement('div');body.className='sc-accordion-body';
+  h.remove();while(panel.firstChild)body.appendChild(panel.firstChild);
+  details.append(summary,body);panel.appendChild(details);panel.dataset.scMajorAccordion='1';
+ }
+ // Frequently used result list remains visible; heavy tools open only when needed.
+ accordionizeBox(document.getElementById('batchBgPanel'),'🪄 一括背景除去');
+ accordionizeBox(document.getElementById('batchCenterPanel'),'🎯 一括で余白を均等に配置');
+ const replace=document.getElementById('replacePick')?.closest('.qaBox');
+ accordionizeBox(replace,'🔄 個別画像の差し替え');
+ // Selection and project management are substantial optional workflows.
+ accordionizePanel(document.getElementById('scSelectChoices')?.closest('section.panel'));
+ accordionizePanel(document.getElementById('scProjectPanel'));
+ // Export / QA sections are also collapsed on mobile-oriented main page.
+ ['submissionPanel','emojiSubmissionPanel','qaSection','officialQaSection'].forEach(id=>accordionizePanel(document.getElementById(id)));
+ // If QA section IDs differ in older markup, catch known panels by heading text without touching basic steps ①〜⑤.
+ document.querySelectorAll('main > section.panel').forEach(p=>{
+   if(p.dataset.scMajorAccordion==='1'||p.id==='resultsPanel'||p.id==='developerTestControl'||p.id==='regressionPanel')return;
+   const t=p.querySelector(':scope > h2')?.textContent||'';
+   if(/⑦|⑧/.test(t))accordionizePanel(p);
+ });
 })();
 </script>
 </body></html>
