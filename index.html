@@ -1020,4 +1020,82 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
  if(note&&note.matches('p.muted')&&note.textContent.includes('前後の画像'))save.before(note);
 })();
 </script>
+
+<style>
+#scSelectPanel{margin:18px 0;padding:16px;border:1px solid #94a3b8;border-radius:14px;background:var(--panel,#fff)}
+#scSelectPanel .sc-pool{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0}
+#scSelectPanel .sc-choice{position:relative;min-width:0;border:2px solid #d1d5db;border-radius:10px;padding:5px;background:transparent;color:inherit;cursor:pointer}
+#scSelectPanel .sc-choice[aria-pressed="true"]{border-color:#16a34a;background:rgba(22,163,74,.10)}
+#scSelectPanel .sc-choice img{display:block;width:100%;aspect-ratio:1;object-fit:contain;background:repeating-conic-gradient(#ddd 0% 25%,#fff 0% 50%) 50%/14px 14px}
+#scSelectPanel .sc-choice small{display:block;font-size:11px;margin-top:3px}
+#scSelectPanel .sc-ordered{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+#scSelectPanel .sc-ordered button{font-size:12px;padding:6px 9px;border:1px solid #94a3b8;border-radius:8px;background:transparent;color:inherit}
+#scSelectPanel .sc-choice:focus-visible,#scSelectPanel button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+@media(min-width:720px){#scSelectPanel .sc-pool{grid-template-columns:repeat(8,minmax(0,1fr))}}
+</style>
+<script>
+/* Beta 0.8.5: non-destructive selection pool, independent from existing editor. */
+(()=>{
+ const panel=document.createElement('section');panel.id='scSelectPanel';panel.hidden=true;
+ panel.innerHTML='<h2>⑤-補助 好きな画像を選んで仕上げる</h2><p class="muted">分割した候補から採用する画像を選びます。候補は削除せず保持し、後から入れ替えできます。採用順に01.png〜（絵文字ZIPは001.png〜）を振り直します。</p><div id="scSelectInfo" class="status"></div><div class="actions"><button type="button" id="scSelectAll">全候補を選択</button><button type="button" id="scSelectNone">全解除</button><button type="button" id="scSelectRestore">候補一覧に戻す</button></div><div id="scSelectChoices" class="sc-pool"></div><h3>採用順（↑↓で並び替え）</h3><div id="scSelectOrder" class="sc-ordered"></div><div class="actions"><button type="button" class="primary" id="scSelectApply">この組み合わせで制作する</button></div><div id="scSelectStatus" class="status" role="status">8・16・24・32・40枚から選択できます。</div>';
+ const results=$('resultsPanel');results.parentNode.insertBefore(panel,results);
+ let pool=[],chosen=[],committed=false,renderUrls=[];
+ const allowed=[8,16,24,32,40];
+ const cleanup=()=>{renderUrls.forEach(URL.revokeObjectURL);renderUrls=[]};
+ const status=msg=>$('scSelectStatus').textContent=msg;
+ function syncPool(){
+  if(committed)return;
+  if(pool.length===parts.length&&pool.every((p,i)=>p===parts[i]))return;
+  pool=parts.slice();chosen=pool.map((_,i)=>i);
+  render();
+ }
+ function render(){
+  panel.hidden=!pool.length;
+  cleanup();if(!pool.length)return;
+  $('scSelectInfo').textContent=`候補 ${pool.length}枚 ／ 採用 ${chosen.length}枚 ／ ${committed?'採用セット編集中':'候補を選択中'}`;
+  const grid=$('scSelectChoices');grid.replaceChildren();
+  pool.forEach((p,i)=>{
+   const b=document.createElement('button');b.type='button';b.className='sc-choice';b.setAttribute('aria-pressed',String(chosen.includes(i)));
+   const im=document.createElement('img');const u=URL.createObjectURL(p.blob);renderUrls.push(u);im.src=u;im.alt='候補'+(i+1);
+   const label=document.createElement('small');label.textContent=`候補${i+1}${chosen.includes(i)?' ✓ '+(chosen.indexOf(i)+1)+'番':''}`;
+   b.append(im,label);b.onclick=()=>{if(chosen.includes(i))chosen=chosen.filter(x=>x!==i);else chosen.push(i);render()};grid.append(b);
+  });
+  const order=$('scSelectOrder');order.replaceChildren();
+  chosen.forEach((idx,i)=>{const wrap=document.createElement('span');const title=document.createElement('span');title.textContent=`${i+1}番←候補${idx+1} `;wrap.append(title);
+   for(const [symbol,d] of [['↑',-1],['↓',1]]){const b=document.createElement('button');b.type='button';b.textContent=symbol;b.disabled=i+d<0||i+d>=chosen.length;b.setAttribute('aria-label',`候補${idx+1}を${d<0?'前':'後ろ'}へ`);b.onclick=()=>{[chosen[i],chosen[i+d]]=[chosen[i+d],chosen[i]];render()};wrap.append(b)}order.append(wrap)});
+  $('scSelectApply').disabled=!allowed.includes(chosen.length);
+  status(allowed.includes(chosen.length)?'この枚数で制作できます。採用順は上の矢印で変更可能。':'8・16・24・32・40枚のいずれかを選んでください。');
+ }
+ function restore(){
+  if(!committed)return;
+  // Keep edits to selected candidate objects; restore all candidates without deleting them.
+  parts=pool.slice();urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});urls=pool.map(p=>URL.createObjectURL(p.blob));
+  parts.forEach((p,i)=>p.name=String(i+1).padStart(2,'0')+'.png');
+  committed=false;$('result').replaceChildren();buildTiles();$('count').textContent=parts.length+'枚';qa();refreshSubmissionUI();render();
+  status('候補一覧に戻しました。採用画像の編集内容は保持しています。');
+ }
+ $('scSelectRestore').onclick=restore;
+ $('scSelectAll').onclick=()=>{chosen=pool.map((_,i)=>i);render()};
+ $('scSelectNone').onclick=()=>{chosen=[];render()};
+ $('scSelectApply').onclick=()=>{
+  if(!allowed.includes(chosen.length)){status('採用枚数を確認してください。');return}
+  if(committed)restore();
+  const selected=chosen.map(i=>pool[i]);
+  parts=selected;urls.forEach(u=>{if(u)URL.revokeObjectURL(u)});urls=parts.map(p=>URL.createObjectURL(p.blob));
+  parts.forEach((p,i)=>p.name=String(i+1).padStart(2,'0')+'.png');
+  committed=true;$('result').replaceChildren();buildTiles();$('count').textContent=parts.length+'枚';qa();refreshSubmissionUI();render();
+  status(`${parts.length}枚を採用しました。下の画像一覧から編集し、QA・ZIPへ進んでください。候補の入れ替えはこのパネルでできます。`);
+ };
+ // Detect new or appended sheet results. Observer only updates selection pool before commit.
+ const obs=new MutationObserver(()=>{if(!committed)syncPool()});
+ obs.observe($('result'),{childList:true});
+ // For a new sheet after commit, restore the pool before append so candidates aren't lost.
+ $('addSheet').addEventListener('click',()=>{if(committed)restore()},true);
+ // When a new initial split is requested, drop the old candidate set.
+ $('split').addEventListener('click',()=>{if(!stampcraftAppendMode){committed=false;pool=[];chosen=[];cleanup();panel.hidden=true}},true);
+ // If changing mode clears the images, reset pool at the next DOM update.
+ document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{committed=false;pool=[];chosen=[];cleanup();panel.hidden=true},true));
+ syncPool();
+})();
+</script>
 </body></html>
