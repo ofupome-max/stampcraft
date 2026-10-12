@@ -1050,11 +1050,21 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
   if(committed)return;
   if(pool.length===parts.length&&pool.every((p,i)=>p===parts[i]))return;
   const prior=pool.slice(),oldChosen=chosen.map(i=>prior[i]).filter(Boolean);
-  pool=parts.slice();chosen=prior.length?oldChosen.map(p=>pool.indexOf(p)).filter(i=>i>=0):pool.map((_,i)=>i);
-  for(let i=0;i<pool.length;i++)if(!prior.includes(pool[i]))chosen.push(i);
+  pool=parts.slice();
+  if(!prior.length){
+   // Fresh project: every candidate is selected exactly once.
+   chosen=pool.map((_,i)=>i);
+  }else{
+   // Existing pool / appended sheet: preserve the previous selection and auto-select only new candidates.
+   chosen=oldChosen.map(p=>pool.indexOf(p)).filter(i=>i>=0);
+   for(let i=0;i<pool.length;i++)if(!prior.includes(pool[i])&&!chosen.includes(i))chosen.push(i);
+  }
+  // Defensive invariant: selection can never contain duplicates or indices outside the candidate pool.
+  chosen=[...new Set(chosen)].filter(i=>Number.isInteger(i)&&i>=0&&i<pool.length);
   render();
  }
  function render(){
+  chosen=[...new Set(chosen)].filter(i=>Number.isInteger(i)&&i>=0&&i<pool.length);
   panel.hidden=!pool.length;
   cleanup();if(!pool.length)return;
   $('scSelectInfo').textContent=`候補 ${pool.length}枚 ／ 採用 ${chosen.length}枚 ／ ${committed?'採用セット編集中':'候補を選択中'}`;
@@ -1109,7 +1119,7 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
  window.stampcraftSelectionState={
   export:()=>({pool:pool.slice(),chosen:committed?parts.map(p=>pool.indexOf(p)).filter(i=>i>=0):chosen.slice(),committed}),
   import:(items,indices,isCommitted)=>{
-   cleanup();pool=items.slice();chosen=indices.filter(i=>Number.isInteger(i)&&i>=0&&i<pool.length);committed=!!isCommitted;
+   cleanup();pool=items.slice();chosen=[...new Set(indices.filter(i=>Number.isInteger(i)&&i>=0&&i<pool.length))];committed=!!isCommitted;
    render();
   }
  };
@@ -1148,7 +1158,7 @@ document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta
 })();
 </script>
 <script>
-/* Beta 0.8.8a: verified, transactional local-only project export/import. */
+/* Beta 0.8.8b: verified, transactional local-only project export/import. */
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
