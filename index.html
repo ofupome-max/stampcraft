@@ -1057,16 +1057,25 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
 #scSelectPanel .sc-choice small{display:block;font-size:11px;margin-top:3px}
 #scSelectPanel .sc-ordered{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 #scSelectPanel .sc-ordered button{font-size:12px;padding:6px 9px;border:1px solid #94a3b8;border-radius:8px;background:transparent;color:inherit}
+#scSelectPanel .sc-ordered{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;touch-action:pan-y}
+#scSelectPanel .sc-order-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px!important;min-width:0;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+#scSelectPanel .sc-order-card img{width:100%;aspect-ratio:1;object-fit:contain;pointer-events:none;background:repeating-conic-gradient(#ddd 0% 25%,#fff 0% 50%) 50%/14px 14px}
+#scSelectPanel .sc-order-card strong{position:absolute;left:7px;top:7px;min-width:25px;height:25px;line-height:25px;border-radius:999px;background:#111;color:#fff;font-size:13px;pointer-events:none}
+#scSelectPanel .sc-order-card small{font-size:10px;pointer-events:none}
+#scSelectPanel .sc-order-card.sc-swap-picked{outline:3px solid #2563eb;outline-offset:1px}
+#scSelectPanel .sc-order-card.sc-dragging{opacity:.55;transform:scale(.96)}
+#scSelectPanel .sc-order-card.sc-drop-target{outline:3px dashed #16a34a;outline-offset:1px}
+@media(min-width:720px){#scSelectPanel .sc-ordered{grid-template-columns:repeat(8,minmax(0,1fr))}}
 #scSelectPanel .sc-choice:focus-visible,#scSelectPanel button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
 @media(min-width:720px){#scSelectPanel .sc-pool{grid-template-columns:repeat(8,minmax(0,1fr))}}
 </style>
 <script>
-/* Beta 0.9.1: selection pool with permanent candidate cleanup + one-step undo. */
+/* Beta 0.9.2: candidate cleanup + touch-friendly reorder (long-press drag / two-tap swap). */
 (()=>{
  const panel=document.createElement('section');panel.id='scSelectPanel';panel.hidden=true;
- panel.innerHTML='<h2>⑤-補助 好きな画像を選んで仕上げる</h2><p class="muted">分割した候補から採用する画像を選びます。採用解除は候補を残し、候補整理では不要画像をプロジェクトから削除できます。</p><div id="scSelectInfo" class="status"></div><div class="actions"><button type="button" id="scSelectAll">全候補を選択</button><button type="button" id="scSelectNone">全解除</button><button type="button" id="scSelectRestore">候補一覧に戻す</button></div><details id="scDeleteTools" style="margin:12px 0;border:1px solid #e2b8b8;border-radius:10px;padding:10px"><summary style="cursor:pointer;font-weight:800">🗑️ 候補整理・削除</summary><p class="muted">絶対に使わない候補を選んで削除します。採用中の画像を削除した場合は採用一覧からも外れます。直前の削除は1回だけ元に戻せます。</p><div class="actions"><button type="button" id="scDeleteMode">削除する候補を選ぶ</button><button type="button" id="scDeleteSelected" disabled>選択した候補を削除</button><button type="button" id="scDeleteUndo" disabled>直前の削除を元に戻す</button></div><div id="scDeleteStatus" class="muted">通常選択モード</div></details><div id="scSelectChoices" class="sc-pool"></div><h3>採用順（↑↓で並び替え）</h3><div id="scSelectOrder" class="sc-ordered"></div><div class="actions"><button type="button" class="primary" id="scSelectApply">この組み合わせで制作する</button></div><div id="scSelectStatus" class="status" role="status">8・16・24・32・40枚から選択できます。</div>';
+ panel.innerHTML='<h2>⑤-補助 好きな画像を選んで仕上げる</h2><p class="muted">分割した候補から採用する画像を選びます。採用解除は候補を残し、候補整理では不要画像をプロジェクトから削除できます。</p><div id="scSelectInfo" class="status"></div><div class="actions"><button type="button" id="scSelectAll">全候補を選択</button><button type="button" id="scSelectNone">全解除</button><button type="button" id="scSelectRestore">候補一覧に戻す</button></div><details id="scDeleteTools" style="margin:12px 0;border:1px solid #e2b8b8;border-radius:10px;padding:10px"><summary style="cursor:pointer;font-weight:800">🗑️ 候補整理・削除</summary><p class="muted">絶対に使わない候補を選んで削除します。採用中の画像を削除した場合は採用一覧からも外れます。直前の削除は1回だけ元に戻せます。</p><div class="actions"><button type="button" id="scDeleteMode">削除する候補を選ぶ</button><button type="button" id="scDeleteSelected" disabled>選択した候補を削除</button><button type="button" id="scDeleteUndo" disabled>直前の削除を元に戻す</button></div><div id="scDeleteStatus" class="muted">通常選択モード</div></details><div id="scSelectChoices" class="sc-pool"></div><h3>採用順</h3><p class="muted">長押ししてドラッグすると好きな位置へ移動できます。2枚を順番にタップすると、その2枚を入れ替えます。</p><div id="scSelectOrder" class="sc-ordered" aria-label="採用順の並び替え"></div><div id="scOrderStatus" class="muted">画像を長押しして移動、または2枚タップで交換できます。</div><div class="actions"><button type="button" class="primary" id="scSelectApply">この組み合わせで制作する</button></div><div id="scSelectStatus" class="status" role="status">8・16・24・32・40枚から選択できます。</div>';
  const results=$('resultsPanel');results.parentNode.insertBefore(panel,results);
- let pool=[],chosen=[],committed=false,renderUrls=[],deleteMode=false,deleteMarked=new Set(),deleteUndo=null;
+ let pool=[],chosen=[],committed=false,renderUrls=[],deleteMode=false,deleteMarked=new Set(),deleteUndo=null,swapPick=null,dragState=null;
  const allowed=[8,16,24,32,40];
  const seenBlobs=new WeakMap();
  const refreshSelectionPreview=()=>{if(!pool.length)return;for(const [i,p] of pool.entries()){const img=$('scSelectChoices').children[i]?.querySelector('img');if(img&&p.blob&&seenBlobs.get(img)!==p.blob){const next=URL.createObjectURL(p.blob);renderUrls.push(next);img.src=next;seenBlobs.set(img,p.blob)}}};
@@ -1105,10 +1114,23 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
    b.onclick=()=>{if(deleteMode){if(deleteMarked.has(i))deleteMarked.delete(i);else deleteMarked.add(i);render();return}if(chosen.includes(i))chosen=chosen.filter(x=>x!==i);else chosen.push(i);render()};grid.append(b);
   });
   const order=$('scSelectOrder');order.replaceChildren();
-  chosen.forEach((idx,i)=>{const wrap=document.createElement('span');const title=document.createElement('span');title.textContent=`${i+1}番←候補${idx+1} `;wrap.append(title);
-   for(const [symbol,d] of [['↑',-1],['↓',1]]){const b=document.createElement('button');b.type='button';b.textContent=symbol;b.disabled=i+d<0||i+d>=chosen.length;b.setAttribute('aria-label',`候補${idx+1}を${d<0?'前':'後ろ'}へ`);b.onclick=()=>{[chosen[i],chosen[i+d]]=[chosen[i+d],chosen[i]];render()};wrap.append(b)}order.append(wrap)});
+  chosen.forEach((idx,i)=>{
+   const card=document.createElement('button');card.type='button';card.className='sc-order-card';card.dataset.order=String(i);card.setAttribute('aria-label',`${i+1}番、候補${idx+1}`);
+   const im=document.createElement('img');const u=URL.createObjectURL(pool[idx].blob);renderUrls.push(u);im.src=u;im.alt='';
+   const num=document.createElement('strong');num.textContent=String(i+1);
+   const sub=document.createElement('small');sub.textContent=`候補${idx+1}`;
+   card.append(im,num,sub);if(swapPick===i)card.classList.add('sc-swap-picked');
+   let timer=null,moved=false,startX=0,startY=0;
+   const clear=()=>{if(timer){clearTimeout(timer);timer=null}};
+   card.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;startX=e.clientX;startY=e.clientY;moved=false;clear();timer=setTimeout(()=>{timer=null;dragState={from:i,to:i,pointerId:e.pointerId};card.classList.add('sc-dragging');card.setPointerCapture?.(e.pointerId);$('scOrderStatus').textContent=`${i+1}番を移動中…`;navigator.vibrate?.(20)},350)});
+   card.addEventListener('pointermove',e=>{if(!dragState||dragState.pointerId!==e.pointerId){if(Math.hypot(e.clientX-startX,e.clientY-startY)>10){moved=true;clear()}return}moved=true;e.preventDefault();const el=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.sc-order-card');if(el&&order.contains(el)){const to=Number(el.dataset.order);if(Number.isInteger(to)&&to!==dragState.to){dragState.to=to;order.querySelectorAll('.sc-order-card').forEach(x=>x.classList.toggle('sc-drop-target',Number(x.dataset.order)===to))}}if(e.clientY<70)window.scrollBy(0,-18);else if(e.clientY>innerHeight-70)window.scrollBy(0,18)});
+   const finish=e=>{clear();if(!dragState||dragState.pointerId!==e.pointerId)return false;const {from,to}=dragState;dragState=null;order.querySelectorAll('.sc-order-card').forEach(x=>x.classList.remove('sc-dragging','sc-drop-target'));if(from!==to){const [v]=chosen.splice(from,1);chosen.splice(to,0,v);swapPick=null;render();$('scOrderStatus').textContent=`${from+1}番を${to+1}番へ移動しました。`}else $('scOrderStatus').textContent='位置は変更していません。';return true};
+   card.addEventListener('pointerup',e=>{if(finish(e))return;clear();if(moved)return;if(swapPick===null){swapPick=i;render();$('scOrderStatus').textContent=`${i+1}番を選択中。交換したい画像をタップしてください。`}else if(swapPick===i){swapPick=null;render();$('scOrderStatus').textContent='交換選択を解除しました。'}else{const a=swapPick;[chosen[a],chosen[i]]=[chosen[i],chosen[a]];swapPick=null;render();$('scOrderStatus').textContent=`${a+1}番と${i+1}番を交換しました。`}});
+   card.addEventListener('pointercancel',e=>{clear();if(dragState&&dragState.pointerId===e.pointerId){dragState=null;render()}});
+   order.append(card);
+  });
   $('scSelectApply').disabled=!allowed.includes(chosen.length);
-  status(allowed.includes(chosen.length)?'この枚数で制作できます。採用順は上の矢印で変更可能。':'8・16・24・32・40枚のいずれかを選んでください。');
+  status(allowed.includes(chosen.length)?'この枚数で制作できます。採用順は長押しドラッグ、または2枚タップで変更できます。':'8・16・24・32・40枚のいずれかを選んでください。');
  }
  function restore(){
   if(!committed)return;
@@ -1179,7 +1201,7 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
 </script>
 <script>
 /* Version label source of truth: update only this constant on release. */
-const STAMPCRAFT_VERSION='0.9.1';
+const STAMPCRAFT_VERSION='0.9.2';
 document.title='StampCraft Beta '+STAMPCRAFT_VERSION;
 document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta '+STAMPCRAFT_VERSION});
 </script>
