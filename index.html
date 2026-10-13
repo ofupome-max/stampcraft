@@ -58,7 +58,7 @@
 .sc-editor-count{display:inline-flex;align-self:flex-start;background:#e6eefc;color:#1c4485;font-size:15px;font-weight:800;letter-spacing:.02em;border-radius:8px;padding:5px 10px;font-variant-numeric:tabular-nums}
 @media(max-width:480px){#modal{width:96vw;max-height:95dvh;padding:12px}.sc-editor-count{font-size:16px}.sc-nav-label{margin-top:12px}}
 
-/* Beta 0.8.9: mobile-first accordion navigation */
+/* Beta 0.8.9a: mobile-first accordion navigation */
 .sc-accordion{margin:12px 0;border:1px solid #bac7d8;border-radius:14px;background:#fff;overflow:hidden}
 .sc-accordion>summary{list-style:none;cursor:pointer;padding:15px 16px;font-weight:800;font-size:1.08rem;color:#24324a;display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none;-webkit-tap-highlight-color:transparent}
 .sc-accordion>summary::-webkit-details-marker{display:none}
@@ -72,7 +72,7 @@
 .sc-major-accordion[open]>summary{background:transparent;border-bottom:1px solid #d8e0ea;margin-bottom:4px}
 .sc-major-accordion>.sc-accordion-body{padding:12px 0 0}
 @media(max-width:640px){.sc-accordion>summary{padding:14px 13px}.sc-accordion-body{padding:12px}.sc-major-accordion>summary{padding:0 0 12px;font-size:1.15rem}.sc-major-accordion>.sc-accordion-body{padding:10px 0 0}}
-</style></head><body><header><div><h1>✂ StampCraft <span class="badge" data-sc-version>Beta 0.8.6</span></h1><p>画像分割・個別編集・サイズ統一。処理は端末内で完結。</p></div></header><main>
+</style></head><body><header><div><h1>✂ StampCraft <span class="badge" data-sc-version>Beta 0.9.0</span></h1><p>画像分割・個別編集・サイズ統一。処理は端末内で完結。</p></div></header><main>
 <section class="panel"><h2>① 制作モード</h2><div class="modes"><button data-mode="free" class="selected">画像分割</button><button data-mode="sticker">LINEスタンプ</button><button data-mode="emoji">LINE絵文字</button><button data-mode="theme">LINE着せかえ（準備中）</button></div><div id="modeInfo" class="status">自由なサイズで画像を分割できます。</div><p class="muted">非公式ツールです。着せかえは規格が複雑なため、現バージョンでは専用出力を提供しません。</p></section>
 <section class="panel" id="emojiSubmissionPanel" hidden><h2>LINE絵文字・専用出力</h2><p class="muted">通常絵文字用の180×180px PNGを出力します。画像は001.pngから連番で保存。タブ画像は96×74pxです。ZIPの中身を保存前に検証します。文字や絵柄の審査適合は目視確認してください。</p><div class="grid"><div><label for="emojiTabPick">タブ画像に使用する絵文字</label><select id="emojiTabPick"></select></div><div><label>タブ画像プレビュー</label><canvas id="emojiTabPreview" class="checker" width="96" height="74" style="width:144px;max-width:100%;height:auto;border:1px solid #ccd4df"></canvas></div></div><div class="actions"><button id="emojiPreview" class="primary" type="button">絵文字申請データを確認</button><button id="emojiZip" type="button">絵文字用ZIPを保存</button></div><div id="emojiStatus" class="status" role="status">絵文字モードで分割後、確認してください。</div><div class="qaBox" id="emojiQaBox"><h3>絵文字専用QA（40個にも対応）</h3><p class="muted">各PNGの180×180px・容量・透過の有無・余白を確認します。余白10pxはStampCraft独自の目安です。</p><div class="actions"><button id="emojiRunQa" type="button">絵文字を一括QA</button></div><div id="emojiQaSummary" class="status qa" role="status">未検査</div><div id="emojiQaGrid" class="qaGrid"></div></div><div id="emojiFinalGrid" class="submissionFinalGrid"></div></section>
 <section class="panel"><h2>② 画像シート</h2><input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/*"><div id="status" class="status" role="status">画像を選択してください。</div></section>
@@ -91,7 +91,7 @@
 <section class="qaBox" id="officialQaSection"><h3>⑧ 通常LINEスタンプ 申請仕様QA</h3><p class="muted">実際に保存されるPNGを検査します。公式仕様エラーと画質・余白の目視確認を分けて表示します。スタンプモード専用です。</p><div class="actions"><button id="runOfficialQa" class="primary">申請仕様を検査</button></div><div id="officialQaResult" class="status qa" role="status">未検査</div></section>
 <section class="panel" id="developerTestControl" hidden><button type="button" id="toggleRegression" aria-expanded="false">開発者向け総合テストを表示 ▾</button><p class="muted">通常の制作では操作不要です。</p></section>
 <section class="panel" id="regressionPanel" hidden><h2>⑨ 総合動作テスト（スタンプ制作）</h2><p class="muted">複数シート＋一括処理＋個別編集＋ZIPの組み合わせを確認するチェックリストです。チェックはこの画面内だけで保持されます。</p><div id="regressionChecks" style="display:grid;gap:10px"><label><input type="checkbox"> 1. 2枚のシートを追加分割し、32枚の連番を確認</label><label><input type="checkbox"> 2. 一部だけ一括背景除去し、対象外は変化しない</label><label><input type="checkbox"> 3. 一部だけ一括中央配置し、取り消しも動く</label><label><input type="checkbox"> 4. 1枚をトリミングして、リアルタイムQAと保存を確認</label><label><input type="checkbox"> 5. 1枚を差し替えて、最終画像一覧への反映を確認</label><label><input type="checkbox"> 6. ZIPを保存し、展開した34枚を確認</label></div><p id="regressionStatus" class="status qa" role="status">未確認 6項目</p><button type="button" id="regressionReset">チェックをリセット</button></section><section class="panel"><h2>利用上の注意事項</h2><p class="muted">スタンプは最大370×320px、絵文字は180×180pxのプリセットを用意しています。申請には画像枚数・透明背景・余白・メイン画像・タブ画像等の確認が必要です。<strong>静止画スタンプと通常絵文字の専用ZIP出力に対応しますが、審査合格は保証しません。</strong></p><p class="muted note">LINE公式ツールではありません。画像はサーバーに送信しません。元画像は別途保存してください。</p></section></main>
-<dialog id="modal"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="sc-editor-identity"><span id="scEditorCount" class="sc-editor-count" aria-live="polite">画像 1 / 1</span><strong id="modalName"></strong></div><button id="close">閉じる ✕</button></div><div class="compare"><div><label>編集前</label><div class="checker"><canvas id="beforeCanvas"></canvas></div></div><div><label>編集中</label><div class="checker"><canvas id="editorCanvas"></canvas></div></div></div><section class="bgtools"><strong>背景透過（単色 / 複雑背景＋保護ブラシ）</strong><p class="muted">単色背景は外周につながる近い色だけを安全に透過。複雑背景は登録した複数色に近い部分を画像全体から判定し、保護ブラシで残したい部分を守ります。</p><div style="margin-top:10px"><label>背景モード</label><select id="bgMode"><option value="simple">単色背景（安全・推奨）</option><option value="complex">複雑背景（複数色＋保護）</option></select></div><div class="actions"><button id="pickBg">背景色を追加</button><button id="undoBg">最後の色を削除</button></div><div id="bgSamples" class="actions" style="align-items:center"></div><div class="grid" style="margin-top:12px"><div><label>許容範囲</label><div class="tolrow"><input id="tolerance" type="range" min="0" max="120" value="25"><input id="toleranceNumber" type="number" min="0" max="120" step="1" value="25" inputmode="numeric" aria-label="許容範囲を数値入力"></div></div><div><label>表示</label><select id="bgEnabled"><option value="off">透過オフ</option><option value="on">透過結果</option><option value="mask">背景マスク確認</option><option value="protect">保護マスク確認</option><option value="finalmask">最終マスク確認</option><option value="cleanup">残留候補確認</option></select></div></div><div class="protectHint"><strong>保護ツール</strong><p class="muted">キャラクターや文字など「消したくない場所」を守ります。ブラシでなぞるほか、「保護塗りつぶし」を押して左画像をタップすると、現在の背景判定で消去対象ではない連続領域をまとめて保護します。</p><div class="actions"><button id="protectBrush">保護ブラシ：オフ</button><button id="protectFill">保護塗りつぶし</button><label class="protectSize">太さ px<input id="protectSize" type="number" min="2" max="80" value="24" inputmode="numeric"></label><button id="undoProtect">1回戻す</button><button id="clearProtect">保護をすべて消す</button></div></div><div class="cleanupBox"><strong>残留背景クリーニング</strong><p class="muted">通常の透過後に残った背景色の候補を追加検出します。まず「残留候補確認」で赤い候補を確認し、強さを調整してから適用してください。</p><div class="grid"><div><label>除去強さ</label><div class="tolrow"><input id="cleanupStrength" type="range" min="0" max="80" value="15"><input id="cleanupNumber" type="number" min="0" max="80" step="1" value="15" inputmode="numeric"></div></div><div><label>候補表示</label><button id="previewCleanup">残留候補確認</button></div></div><div class="actions"><button id="applyCleanup">残留除去：オフ</button></div></div><div class="actions"><button id="clearBg">透過設定をリセット</button></div><p id="bgNote" class="muted" role="status"></p><div id="liveQaBox" class="liveQaBox liveQaOk"><div class="liveQaTitle">🟢 リアルタイムQA</div><div id="liveQaText">編集すると余白判定を更新します。</div><div id="liveMarginGuide" aria-live="polite" hidden></div></div></section><div id="editWarning" role="status" aria-live="polite"></div><div class="grid"><div><label for="scale">拡大率 <span id="scaleValue">100%</span></label><div class="tolrow"><input id="scale" type="range" min="25" max="250" value="100"><input id="scaleNumber" type="number" min="25" max="250" step="1" value="100" inputmode="numeric" aria-label="拡大率を数値入力"></div></div><div><label for="shiftX">左右位置 <span id="xValue">0</span></label><div class="tolrow"><input id="shiftX" type="range" min="-100" max="100" value="0"><input id="shiftXNumber" type="text" value="0" inputmode="text" autocomplete="off" spellcheck="false" aria-label="左右位置を数値入力"></div></div><div><label for="shiftY">上下位置 <span id="yValue">0</span></label><div class="tolrow"><input id="shiftY" type="range" min="-100" max="100" value="0"><input id="shiftYNumber" type="text" value="0" inputmode="text" autocomplete="off" spellcheck="false" aria-label="上下位置を数値入力"></div></div></div><p class="muted">画像ごとに拡大・縮小と上下左右の位置を調整できます。位置は余白内の配置領域に対する割合です。調整後「この画像に適用」で保存結果へ反映されます。</p><div class="actions"><button id="autoCenter" type="button">余白を均等に配置（位置のみ）</button><button id="undoAutoCenter" type="button" disabled>自動調整を戻す</button></div><p id="autoCenterNote" class="muted" role="status">現在の透過結果を基準に配置します。拡大率・元画像は変更しません。</p><div class="actions"><button id="prevOne">← 前の画像</button><button id="nextOne">次の画像 →</button></div><p class="muted">前後の画像へ移動すると、現在の調整内容を自動的に適用します。</p><section style="margin:12px 0;padding:12px;border:1px solid #bac7d8;border-radius:10px"><strong>✂️ 画像トリミング（元画像を保持）</strong><p class="muted">上下左右の指定pxを透明化して切り抜きます。プレビューとQAに反映され、元の画像は残ります。数値は分割元画像のピクセル単位です。</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><label>上（px）<input id="cropTop" type="number" min="0" step="1" value="0" inputmode="numeric"></label><label>右（px）<input id="cropRight" type="number" min="0" step="1" value="0" inputmode="numeric"></label><label>下（px）<input id="cropBottom" type="number" min="0" step="1" value="0" inputmode="numeric"></label><label>左（px）<input id="cropLeft" type="number" min="0" step="1" value="0" inputmode="numeric"></label></div><div class="actions"><button type="button" id="cropReset">トリミングを解除</button></div><p id="cropNote" class="muted" role="status">未設定</p></section><div class="actions"><button id="apply" class="primary">この画像に適用</button><button id="resetOne">個別編集をリセット</button><button id="downloadOne">このPNGを保存</button></div></dialog><footer class="muted">StampCraft <span data-sc-version>Beta 0.8.6</span> · Browser-only image processing</footer>
+<dialog id="modal"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="sc-editor-identity"><span id="scEditorCount" class="sc-editor-count" aria-live="polite">画像 1 / 1</span><strong id="modalName"></strong></div><button id="close">閉じる ✕</button></div><div class="compare"><div><label>編集前</label><div class="checker"><canvas id="beforeCanvas"></canvas></div></div><div><label>編集中</label><div class="checker"><canvas id="editorCanvas"></canvas></div></div></div><section class="bgtools"><strong>背景透過（単色 / 複雑背景＋保護ブラシ）</strong><p class="muted">単色背景は外周につながる近い色だけを安全に透過。複雑背景は登録した複数色に近い部分を画像全体から判定し、保護ブラシで残したい部分を守ります。</p><div style="margin-top:10px"><label>背景モード</label><select id="bgMode"><option value="simple">単色背景（安全・推奨）</option><option value="complex">複雑背景（複数色＋保護）</option></select></div><div class="actions"><button id="pickBg">背景色を追加</button><button id="undoBg">最後の色を削除</button></div><div id="bgSamples" class="actions" style="align-items:center"></div><div class="grid" style="margin-top:12px"><div><label>許容範囲</label><div class="tolrow"><input id="tolerance" type="range" min="0" max="120" value="25"><input id="toleranceNumber" type="number" min="0" max="120" step="1" value="25" inputmode="numeric" aria-label="許容範囲を数値入力"></div></div><div><label>表示</label><select id="bgEnabled"><option value="off">透過オフ</option><option value="on">透過結果</option><option value="mask">背景マスク確認</option><option value="protect">保護マスク確認</option><option value="finalmask">最終マスク確認</option><option value="cleanup">残留候補確認</option></select></div></div><div class="protectHint"><strong>保護ツール</strong><p class="muted">キャラクターや文字など「消したくない場所」を守ります。ブラシでなぞるほか、「保護塗りつぶし」を押して左画像をタップすると、現在の背景判定で消去対象ではない連続領域をまとめて保護します。</p><div class="actions"><button id="protectBrush">保護ブラシ：オフ</button><button id="protectFill">保護塗りつぶし</button><label class="protectSize">太さ px<input id="protectSize" type="number" min="2" max="80" value="24" inputmode="numeric"></label><button id="undoProtect">1回戻す</button><button id="clearProtect">保護をすべて消す</button></div></div><div class="cleanupBox"><strong>残留背景クリーニング</strong><p class="muted">通常の透過後に残った背景色の候補を追加検出します。まず「残留候補確認」で赤い候補を確認し、強さを調整してから適用してください。</p><div class="grid"><div><label>除去強さ</label><div class="tolrow"><input id="cleanupStrength" type="range" min="0" max="80" value="15"><input id="cleanupNumber" type="number" min="0" max="80" step="1" value="15" inputmode="numeric"></div></div><div><label>候補表示</label><button id="previewCleanup">残留候補確認</button></div></div><div class="actions"><button id="applyCleanup">残留除去：オフ</button></div></div><div class="actions"><button id="clearBg">透過設定をリセット</button></div><p id="bgNote" class="muted" role="status"></p><div id="liveQaBox" class="liveQaBox liveQaOk"><div class="liveQaTitle">🟢 リアルタイムQA</div><div id="liveQaText">編集すると余白判定を更新します。</div><div id="liveMarginGuide" aria-live="polite" hidden></div></div></section><div id="editWarning" role="status" aria-live="polite"></div><div class="grid"><div><label for="scale">拡大率 <span id="scaleValue">100%</span></label><div class="tolrow"><input id="scale" type="range" min="25" max="250" value="100"><input id="scaleNumber" type="number" min="25" max="250" step="1" value="100" inputmode="numeric" aria-label="拡大率を数値入力"></div></div><div><label for="shiftX">左右位置 <span id="xValue">0</span></label><div class="tolrow"><input id="shiftX" type="range" min="-100" max="100" value="0"><input id="shiftXNumber" type="text" value="0" inputmode="text" autocomplete="off" spellcheck="false" aria-label="左右位置を数値入力"></div></div><div><label for="shiftY">上下位置 <span id="yValue">0</span></label><div class="tolrow"><input id="shiftY" type="range" min="-100" max="100" value="0"><input id="shiftYNumber" type="text" value="0" inputmode="text" autocomplete="off" spellcheck="false" aria-label="上下位置を数値入力"></div></div></div><p class="muted">画像ごとに拡大・縮小と上下左右の位置を調整できます。位置は余白内の配置領域に対する割合です。調整後「この画像に適用」で保存結果へ反映されます。</p><div class="actions"><button id="autoCenter" type="button">余白を均等に配置（位置のみ）</button><button id="undoAutoCenter" type="button" disabled>自動調整を戻す</button></div><p id="autoCenterNote" class="muted" role="status">現在の透過結果を基準に配置します。拡大率・元画像は変更しません。</p><div class="actions"><button id="prevOne">← 前の画像</button><button id="nextOne">次の画像 →</button></div><p class="muted">前後の画像へ移動すると、現在の調整内容を自動的に適用します。</p><section style="margin:12px 0;padding:12px;border:1px solid #bac7d8;border-radius:10px"><strong>✂️ 画像トリミング（元画像を保持）</strong><p class="muted">上下左右の指定pxを透明化して切り抜きます。プレビューとQAに反映され、元の画像は残ります。数値は分割元画像のピクセル単位です。</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><label>上（px）<input id="cropTop" type="number" min="0" step="1" value="0" inputmode="numeric"></label><label>右（px）<input id="cropRight" type="number" min="0" step="1" value="0" inputmode="numeric"></label><label>下（px）<input id="cropBottom" type="number" min="0" step="1" value="0" inputmode="numeric"></label><label>左（px）<input id="cropLeft" type="number" min="0" step="1" value="0" inputmode="numeric"></label></div><div class="actions"><button type="button" id="cropReset">トリミングを解除</button></div><p id="cropNote" class="muted" role="status">未設定</p></section><div class="actions"><button id="apply" class="primary">この画像に適用</button><button id="resetOne">個別編集をリセット</button><button id="downloadOne">このPNGを保存</button></div></dialog><footer class="muted">StampCraft <span data-sc-version>Beta 0.9.0</span> · Browser-only image processing</footer>
 <script>
 window.addEventListener('DOMContentLoaded',()=>{const inputs=[...document.querySelectorAll('#regressionChecks input')],status=document.getElementById('regressionStatus');const update=()=>{const done=inputs.filter(x=>x.checked).length;status.textContent=done===inputs.length?'🟢 総合テスト 6/6 完了（ユーザー確認）':'確認済み '+done+' / '+inputs.length+'項目';};inputs.forEach(x=>x.addEventListener('change',update));document.getElementById('regressionReset').addEventListener('click',()=>{inputs.forEach(x=>x.checked=false);update()});});
 
@@ -281,9 +281,20 @@ $('emojiZip').onclick=async()=>{
 function refreshSubmissionUI(){stampcraftRefreshEmojiUI();stampcraftClearFinalPreview();const section=$('submissionPanel');section.hidden=mode!=='sticker'||!parts.length;if(section.hidden)return;for(const id of ['mainPick','tabPick']){const el=$(id),old=Number(el.value)||0;el.replaceChildren();parts.forEach((it,i)=>{const opt=document.createElement('option');opt.value=String(i);opt.textContent=it.name;el.append(opt)});el.value=String(Math.min(old,parts.length-1))}if(parts.length>1&&$('tabPick').value==='0')$('tabPick').value='1';$('submissionQa').textContent='プレビューを押すとmain・tabを作成し、申請前チェックを表示します。';$('mainPreview').getContext('2d').clearRect(0,0,240,240);$('tabPreview').getContext('2d').clearRect(0,0,96,74)}
 async function makeThumb(blob,w,h){const bmp=await createImageBitmap(blob);try{const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.clearRect(0,0,w,h);const scale=Math.min(w/bmp.width,h/bmp.height),dw=bmp.width*scale,dh=bmp.height*scale;c.drawImage(bmp,(w-dw)/2,(h-dh)/2,dw,dh);return{canvas,blob:await canvasBlob(canvas)}}finally{bmp.close?.()}}
 async function alphaStats(blob){const bmp=await createImageBitmap(blob);try{const canvas=document.createElement('canvas');canvas.width=bmp.width;canvas.height=bmp.height;const cx=canvas.getContext('2d',{willReadFrequently:true});cx.drawImage(bmp,0,0);const data=cx.getImageData(0,0,canvas.width,canvas.height).data;let transparent=0,opaque=0;for(let i=3;i<data.length;i+=4){if(data[i]===0)transparent++;if(data[i]===255)opaque++}return{w:bmp.width,h:bmp.height,transparent,opaque}}finally{bmp.close?.()}}
-async function buildSubmission(){if(mode!=='sticker')throw Error('LINEスタンプモードを選択してください。');if(![8,16,24,32,40].includes(parts.length))throw Error('静止画スタンプは8/16/24/32/40枚が必要です。現在 '+parts.length+'枚です。');const errors=[],warnings=[];for(let i=0;i<parts.length;i++){const it=parts[i];if(!it.blob)errors.push(it.name+' のPNGがありません');if(it.w>370||it.h>320||it.w<2||it.h<2||it.w%2||it.h%2)errors.push(it.name+'：サイズは370×320以内の偶数にしてください');if(it.blob?.size>1024*1024)errors.push(it.name+'：1MB超過');}
-if(errors.length)throw Error(errors.slice(0,6).join(' / '));const m=await makeThumb(parts[Number($('mainPick').value)].blob,240,240),t=await makeThumb(parts[Number($('tabPick').value)].blob,96,74);const entries=parts.map(it=>({name:it.name,blob:it.blob}));entries.push({name:'main.png',blob:m.blob},{name:'tab.png',blob:t.blob});for(const it of entries){if(it.blob.size>1024*1024)errors.push(it.name+'：1MB超過');const a=await alphaStats(it.blob);if(!a.transparent)errors.push(it.name+'：透明ピクセルがありません（背景透過を確認してください）');if(a.transparent&&a.opaque===0)warnings.push(it.name+'：画像が非常に薄い可能性があります')}
-const total=entries.reduce((n,it)=>n+it.blob.size,0);if(total>60*1024*1024)errors.push('合計サイズが60MBを超えています');return{entries,m,t,errors,warnings,total}}
+async function stampcraftEvenStickerBlob(it){
+ if(!it?.blob)throw Error(it?.name+' のPNGがありません');
+ const bmp=await createImageBitmap(it.blob);try{
+  const w=bmp.width,h=bmp.height,nw=w+(w%2),nh=h+(h%2);
+  if(nw>370||nh>320||nw<2||nh<2)throw Error(it.name+'：サイズは370×320以内にしてください');
+  if(nw===w&&nh===h)return{blob:it.blob,w,h,corrected:false};
+  const c=document.createElement('canvas');c.width=nw;c.height=nh;const x=c.getContext('2d');x.clearRect(0,0,nw,nh);
+  const dx=Math.floor((nw-w)/2),dy=Math.floor((nh-h)/2);x.drawImage(bmp,dx,dy);
+  return{blob:await canvasBlob(c),w:nw,h:nh,corrected:true,fromW:w,fromH:h};
+ }finally{bmp.close?.()}
+}
+async function buildSubmission(){if(mode!=='sticker')throw Error('LINEスタンプモードを選択してください。');if(![8,16,24,32,40].includes(parts.length))throw Error('静止画スタンプは8/16/24/32/40枚が必要です。現在 '+parts.length+'枚です。');const errors=[],warnings=[],stickerEntries=[],outputMeta=[];for(let i=0;i<parts.length;i++){const it=parts[i];try{const fixed=await stampcraftEvenStickerBlob(it);if(fixed.blob.size>1024*1024)errors.push(it.name+'：1MB超過');if(fixed.corrected)warnings.push('🟢 自動補正済み '+it.name+'：'+fixed.fromW+'×'+fixed.fromH+' → '+fixed.w+'×'+fixed.h+'（透明余白のみ追加）');stickerEntries.push({name:it.name,blob:fixed.blob});outputMeta.push(fixed)}catch(e){errors.push(e.message)}}
+if(errors.length)throw Error(errors.slice(0,6).join(' / '));const m=await makeThumb(stickerEntries[Number($('mainPick').value)].blob,240,240),t=await makeThumb(stickerEntries[Number($('tabPick').value)].blob,96,74);const entries=stickerEntries.slice();entries.push({name:'main.png',blob:m.blob},{name:'tab.png',blob:t.blob});for(const it of entries){if(it.blob.size>1024*1024)errors.push(it.name+'：1MB超過');const a=await alphaStats(it.blob);if(!a.transparent)errors.push(it.name+'：透明ピクセルがありません（背景透過を確認してください）');if(a.transparent&&a.opaque===0)warnings.push(it.name+'：画像が非常に薄い可能性があります')}
+const total=entries.reduce((n,it)=>n+it.blob.size,0);if(total>60*1024*1024)errors.push('合計サイズが60MBを超えています');return{entries,m,t,errors,warnings,total,outputMeta}}
 function drawThumbPreview(src,dst){const cx=dst.getContext('2d');dst.width=src.width;dst.height=src.height;cx.clearRect(0,0,dst.width,dst.height);cx.drawImage(src,0,0)}
 let stampcraftFinalSnapshot=null;
 async function stampcraftFingerprint(blob){
@@ -301,9 +312,9 @@ async function stampcraftReplacementReport(pack){
  for(const i of replaced){
    const current=await canvasBlob(renderPart({...parts[i],bg:{...(parts[i].bg||{}),mask:false}}));
    const a=new Uint8Array(await current.arrayBuffer()),b=new Uint8Array(await pack.entries[i].blob.arrayBuffer());
-   if(a.length!==b.length||a.some((v,k)=>v!==b[k]))errors.push(parts[i].name);
+   if(pack.outputMeta?.[i]?.corrected)continue;if(a.length!==b.length||a.some((v,k)=>v!==b[k]))errors.push(parts[i].name);
  }
- report.textContent=errors.length?'🔴 差し替え画像の不一致：'+errors.join('、'):'🟢 差し替え'+replaced.length+'枚（'+replaced.map(i=>parts[i].name).join('、')+'）は最終PNGと一致。ZIP保存時にも再確認します。';
+ report.textContent=errors.length?'🔴 差し替え画像の不一致：'+errors.join('、'):'🟢 差し替え'+replaced.length+'枚（'+replaced.map(i=>parts[i].name).join('、')+'）は最終PNGと一致（偶数化対象は透明余白追加後の出力を使用）。ZIP保存時にも再確認します。';
  if(errors.length)throw Error('差し替え画像が出力PNGと一致しません');
 }
 let stampcraftFinalUrls=[];
@@ -322,7 +333,7 @@ function stampcraftShowFinalPreview(pack){
   const name=document.createElement('div');name.className='finalName';name.textContent=entry.name+(i<parts.length&&parts[i].replacementBitmap?' 🔄':'');
   const checker=document.createElement('div');checker.className='checker';
   const img=document.createElement('img');const url=URL.createObjectURL(entry.blob);stampcraftFinalUrls.push(url);img.src=url;img.alt=entry.name+' 最終出力プレビュー';img.loading='lazy';checker.append(img);
-  const meta=document.createElement('div');meta.className='finalMeta';meta.textContent=(i<parts.length?parts[i].w+'×'+parts[i].h:i===parts.length?'240×240':'96×74')+' · '+(entry.blob.size/1024).toFixed(1)+'KB';
+  const meta=document.createElement('div');meta.className='finalMeta';meta.textContent=(i<parts.length&&pack.outputMeta?.[i]?pack.outputMeta[i].w+'×'+pack.outputMeta[i].h:i<parts.length?parts[i].w+'×'+parts[i].h:i===parts.length?'240×240':'96×74')+' · '+(entry.blob.size/1024).toFixed(1)+'KB';
   card.append(name,checker,meta);
   if(i<parts.length){const btn=document.createElement('button');btn.type='button';btn.textContent='この画像を編集';btn.onclick=()=>openEditor(i);card.append(btn)}
   grid.append(card);
@@ -1143,7 +1154,7 @@ clearResults=function(){originalCenterClearResults();batchCenterPlan=null;batchC
 </script>
 <script>
 /* Version label source of truth: update only this constant on release. */
-const STAMPCRAFT_VERSION='0.8.9';
+const STAMPCRAFT_VERSION='0.9.0';
 document.title='StampCraft Beta '+STAMPCRAFT_VERSION;
 document.querySelectorAll('[data-sc-version]').forEach(el=>{el.textContent='Beta '+STAMPCRAFT_VERSION});
 </script>
@@ -1285,7 +1296,7 @@ $('scProjectLoad').addEventListener('change',async e=>{
 </script>
 
 <script>
-/* Beta 0.8.9: compact mobile navigation. Existing tool IDs and processing are unchanged. */
+/* Beta 0.8.9a: compact mobile navigation. Existing tool IDs and processing are unchanged. */
 (function(){
  'use strict';
  function accordionizeBox(box,title){
@@ -1326,6 +1337,72 @@ $('scProjectLoad').addEventListener('change',async e=>{
    const t=p.querySelector(':scope > h2')?.textContent||'';
    if(/⑦|⑧/.test(t))accordionizePanel(p);
  });
+})();
+</script>
+
+<style>
+#scSimilarityPanel .sc-sim-grid{display:grid;gap:12px;margin-top:12px}
+#scSimilarityPanel .sc-sim-card{border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:#fff}
+#scSimilarityPanel .sc-sim-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+#scSimilarityPanel .sc-sim-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#scSimilarityPanel .sc-sim-pair figure{margin:0;min-width:0;text-align:center}
+#scSimilarityPanel .sc-sim-pair img{display:block;width:100%;max-height:190px;object-fit:contain;border-radius:8px;background:repeating-conic-gradient(#e5e7eb 0 25%,#fff 0 50%) 50%/16px 16px}
+#scSimilarityPanel .sc-sim-score{font-weight:800}
+#scSimilarityPanel .sc-sim-danger{color:#b91c1c}.sc-sim-warn{color:#a16207}.sc-sim-note{color:#475569}
+@media(max-width:480px){#scSimilarityPanel .sc-sim-card{padding:10px}#scSimilarityPanel .sc-sim-pair{gap:7px}}
+</style>
+<script>
+/* Beta 0.9.0: local visual duplicate/similarity checker. No image is uploaded. */
+(function(){
+ 'use strict';
+ const results=document.getElementById('resultsPanel'); if(!results)return;
+ const panel=document.createElement('section'); panel.id='scSimilarityPanel'; panel.className='panel'; panel.hidden=true;
+ panel.innerHTML='<h2>⑥ 重複・類似画像チェック</h2><p class="muted">採用中の画像を端末内で総当たり比較し、見た目が近い組み合わせを表示します。文字の意味（例：「おはよう」と「おはようございます」）はまだ判定しません。</p><div class="actions"><button type="button" class="primary" id="scSimilarityRun">採用画像をチェック</button></div><div id="scSimilarityStatus" class="status" role="status">未検査</div><div id="scSimilarityGrid" class="sc-sim-grid"></div>';
+ results.parentNode.insertBefore(panel,results.nextSibling);
+ const status=document.getElementById('scSimilarityStatus'),grid=document.getElementById('scSimilarityGrid'),run=document.getElementById('scSimilarityRun');
+ let objectUrls=[];
+ function cleanup(){objectUrls.forEach(URL.revokeObjectURL);objectUrls=[]}
+ function hamming(a,b){let n=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i])n++;return n}
+ async function signature(part){
+   const bmp=await createImageBitmap(part.blob); const c=document.createElement('canvas'),ctx=c.getContext('2d',{willReadFrequently:true});
+   c.width=33;c.height=32;ctx.clearRect(0,0,33,32);
+   // Crop transparent outer whitespace so pose/shape drives comparison more than margins.
+   const src=document.createElement('canvas'),sx=src.getContext('2d',{willReadFrequently:true});src.width=bmp.width;src.height=bmp.height;sx.drawImage(bmp,0,0);const d=sx.getImageData(0,0,src.width,src.height).data;
+   let x0=src.width,y0=src.height,x1=-1,y1=-1;for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++){if(d[(y*src.width+x)*4+3]>12){if(x<x0)x0=x;if(y<y0)y0=y;if(x>x1)x1=x;if(y>y1)y1=y}}
+   if(x1<0){x0=0;y0=0;x1=src.width-1;y1=src.height-1}
+   const w=x1-x0+1,h=y1-y0+1,scale=Math.min(31/w,30/h),dw=Math.max(1,w*scale),dh=Math.max(1,h*scale),dx=(33-dw)/2,dy=(32-dh)/2;
+   ctx.drawImage(bmp,x0,y0,w,h,dx,dy,dw,dh);bmp.close?.();
+   const px=ctx.getImageData(0,0,33,32).data,gray=[],alpha=[];for(let y=0;y<32;y++)for(let x=0;x<33;x++){const i=(y*33+x)*4,a=px[i+3]/255;gray.push((.299*px[i]+.587*px[i+1]+.114*px[i+2])*a+255*(1-a));alpha.push(px[i+3])}
+   const dhash=[];for(let y=0;y<32;y++)for(let x=0;x<32;x++){const i=y*33+x;dhash.push(gray[i]>gray[i+1]?1:0)}
+   const ahash=[];let sum=0;for(let y=0;y<32;y++)for(let x=0;x<32;x++)sum+=gray[y*33+x];const mean=sum/1024;for(let y=0;y<32;y++)for(let x=0;x<32;x++)ahash.push(gray[y*33+x]<mean?1:0);
+   const amask=[];for(let y=0;y<32;y++)for(let x=0;x<32;x++)amask.push(alpha[y*33+x]>24?1:0);
+   return {dhash,ahash,amask};
+ }
+ function similarity(a,b){const d=1-hamming(a.dhash,b.dhash)/a.dhash.length,ah=1-hamming(a.ahash,b.ahash)/a.ahash.length,am=1-hamming(a.amask,b.amask)/a.amask.length;return Math.max(0,Math.min(1,d*.42+ah*.28+am*.30))}
+ function label(score){if(score>=.965)return ['🔴 ほぼ重複','sc-sim-danger'];if(score>=.90)return ['🟠 かなり似ている','sc-sim-warn'];return ['🟡 類似候補','sc-sim-note']}
+ function editAt(i){if(typeof openEditor==='function')openEditor(i);else document.querySelectorAll('#result img, #result canvas')[i]?.click()}
+ async function removeAt(activeIndex){
+   const st=window.stampcraftSelectionState?.export?.(); if(!st?.pool?.length||!st.committed){status.textContent='採用セット確定後に解除できます。候補選択で調整してください。';return}
+   const poolIndex=st.chosen[activeIndex]; document.getElementById('scSelectRestore')?.click();
+   await new Promise(r=>setTimeout(r,0)); const btn=document.getElementById('scSelectChoices')?.children?.[poolIndex]; if(btn)btn.click();
+   status.textContent='候補'+(poolIndex+1)+'を採用解除しました。必要なら別候補を選び、「この組み合わせで制作する」を押してください。'; panel.scrollIntoView({behavior:'smooth',block:'start'});
+ }
+ run.onclick=async()=>{
+   if(parts.length<2){status.textContent='比較する画像が2枚以上必要です。';return}
+   run.disabled=true;cleanup();grid.replaceChildren();status.textContent='比較中… 0 / '+parts.length+'枚';
+   try{
+     const sig=[];for(let i=0;i<parts.length;i++){sig.push(await signature(parts[i]));status.textContent='特徴を解析中… '+(i+1)+' / '+parts.length+'枚';await new Promise(r=>setTimeout(r,0))}
+     const pairs=[];for(let i=0;i<sig.length;i++)for(let j=i+1;j<sig.length;j++){const score=similarity(sig[i],sig[j]);if(score>=.82)pairs.push({i,j,score})}pairs.sort((a,b)=>b.score-a.score);
+     if(!pairs.length){status.textContent='🟢 類似候補は見つかりませんでした（'+parts.length+'枚を比較）。';return}
+     status.textContent='⚠️ 類似候補 '+pairs.length+'組。上ほど似ています。最終判断は画像を見て行ってください。';
+     pairs.slice(0,30).forEach(({i,j,score})=>{const card=document.createElement('article');card.className='sc-sim-card';const [lab,cls]=label(score);const head=document.createElement('div');head.className='sc-sim-head';head.innerHTML='<strong class="'+cls+'">'+lab+'</strong><span class="sc-sim-score">類似度 '+Math.round(score*100)+'%</span>';const pair=document.createElement('div');pair.className='sc-sim-pair';
+       for(const k of [i,j]){const f=document.createElement('figure'),im=document.createElement('img'),cap=document.createElement('figcaption');const u=URL.createObjectURL(parts[k].blob);objectUrls.push(u);im.src=u;im.alt=String(k+1).padStart(2,'0')+'.png';cap.textContent=String(k+1).padStart(2,'0')+'.png';f.append(im,cap);pair.append(f)}
+       const actions=document.createElement('div');actions.className='actions';for(const k of [i,j]){const e=document.createElement('button');e.type='button';e.textContent=String(k+1).padStart(2,'0')+'を編集';e.onclick=()=>editAt(k);actions.append(e);const rm=document.createElement('button');rm.type='button';rm.textContent=String(k+1).padStart(2,'0')+'を採用解除';rm.onclick=()=>removeAt(k);actions.append(rm)}card.append(head,pair,actions);grid.append(card)});
+   }catch(e){status.textContent='チェック失敗：'+e.message}finally{run.disabled=false}
+ };
+ // Keep the new tool compact like the other optional workflows.
+ const h=panel.querySelector(':scope > h2'),details=document.createElement('details'),summary=document.createElement('summary'),body=document.createElement('div');details.className='sc-accordion sc-major-accordion';body.className='sc-accordion-body';summary.textContent=h.textContent.trim();h.remove();while(panel.firstChild)body.appendChild(panel.firstChild);details.append(summary,body);panel.append(details);
+ const obs=new MutationObserver(()=>{panel.hidden=parts.length<2});obs.observe(document.getElementById('result'),{childList:true,subtree:true});panel.hidden=parts.length<2;
 })();
 </script>
 </body></html>
